@@ -27,13 +27,13 @@
       "severity": "info"
     },
     {
-      "label": "fetch_only",
-      "value": "1",
+      "label": "authority",
+      "value": "Grabowski owns all effects",
       "severity": "info"
     },
     {
-      "label": "mutating_stage_d",
-      "value": "2",
+      "label": "retired_compatibility",
+      "value": "3",
       "severity": "warning"
     }
   ],
@@ -43,13 +43,13 @@
       "rows": [
         {
           "label": "action run-git-pull-ff-only",
-          "value": "mutating_stage_d",
+          "value": "retired_compatibility",
           "severity": "warning",
           "source_ref": "scripts/docmeta/cli_surface.json"
         },
         {
           "label": "action run-switch-main",
-          "value": "mutating_stage_d",
+          "value": "retired_compatibility",
           "severity": "warning",
           "source_ref": "scripts/docmeta/cli_surface.json"
         }

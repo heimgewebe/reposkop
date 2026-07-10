@@ -670,15 +670,14 @@ def test_switch_main_success_example_matches_plan_hash():
 # ---------------------------------------------------------------------------
 # CLI surface guards
 # ---------------------------------------------------------------------------
-def test_run_switch_main_is_mutating_stage_d():
+def test_run_switch_main_is_retired_compatibility():
     by_command = {command: klass for command, klass, _ in surface.collect_surface()[1]}
-    assert by_command["action run-switch-main"] == "mutating_stage_d"
+    assert by_command["action run-switch-main"] == "retired_compatibility"
 
 
-def test_exactly_two_mutating_stage_d_executors():
+def test_no_mutating_stage_d_executors_remain():
     by_command = {command: klass for command, klass, _ in surface.collect_surface()[1]}
-    mutating = sorted(c for c, k in by_command.items() if k == "mutating_stage_d")
-    assert mutating == ["action run-git-pull-ff-only", "action run-switch-main"]
+    assert not [c for c, k in by_command.items() if k == "mutating_stage_d"]
 
 
 def test_run_switch_main_command_exists_in_parser():
@@ -724,12 +723,13 @@ def test_cli_run_switch_main_success(tmp_path):
         "--postcheck-out", str(postcheck_out),
         "--json",
     ])
-    assert proc.returncode == 0, proc.stderr
+    assert proc.returncode == 1, proc.stderr
     result = json.loads(proc.stdout)
-    assert result["status"] == "success"
+    assert result["status"] == "blocked"
+    assert "operation retired from steuerboard" in result["blocked_reasons"][0]
     assert result["action"] == "switch-main"
-    assert trace_out.exists() and result_out.exists() and postcheck_out.exists()
-    assert _live_branch(repo) == "main"
+    assert not trace_out.exists() and not result_out.exists() and not postcheck_out.exists()
+    assert _live_branch(repo) == "feature/x"
 
 
 def test_cli_run_switch_main_blocked_sentinel_writes_no_files(tmp_path):
@@ -848,8 +848,10 @@ def test_cli_run_switch_main_via_real_approval_validate_path(tmp_path):
         "--postcheck-out", str(postcheck_out),
         "--json",
     ])
-    assert proc.returncode == 0, proc.stderr
+    assert proc.returncode == 1, proc.stderr
     result = json.loads(proc.stdout)
-    assert result["status"] == "success"
+    assert result["status"] == "blocked"
+    assert "operation retired from steuerboard" in result["blocked_reasons"][0]
     assert result["action"] == "switch-main"
-    assert _live_branch(repo) == "main"
+    assert not trace_out.exists() and not result_out.exists() and not postcheck_out.exists()
+    assert _live_branch(repo) == "feature/x"

@@ -97,7 +97,7 @@ def test_profile_show_derives_effective_operation_gates(tmp_path: Path) -> None:
     assert profile["host"] == "test-host"
     assert profile["config_path"] == str(config_path.absolute())
     assert profile["effective_operations"] == {
-        "remote-refresh.fetch-origin-prune": True,
+        "remote-refresh.fetch-origin-prune": False,
         "action.run-git-pull-ff-only": False,
         "action.run-switch-main": False,
     }
@@ -124,7 +124,7 @@ def test_profile_show_cli_emits_schema_valid_json(tmp_path: Path) -> None:
 
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
-    assert payload["effective_operations"]["action.run-git-pull-ff-only"] is True
+    assert payload["effective_operations"]["action.run-git-pull-ff-only"] is False
     assert payload["effective_operations"]["action.run-switch-main"] is False
     validate_instance(payload, load_json(PROFILE_SCHEMA_PATH), Path("profile-cli.json"))
 
@@ -133,10 +133,10 @@ def test_profile_show_cli_emits_schema_valid_json(tmp_path: Path) -> None:
     ("policy", "expected"),
     [
         (OperationalPolicy(False, False, False), (False, False, False)),
-        (OperationalPolicy(False, True, True), (True, False, False)),
-        (OperationalPolicy(True, False, True), (True, True, False)),
-        (OperationalPolicy(True, True, False), (False, False, True)),
-        (OperationalPolicy(True, True, True), (True, True, True)),
+        (OperationalPolicy(False, True, True), (False, False, False)),
+        (OperationalPolicy(True, False, True), (False, False, False)),
+        (OperationalPolicy(True, True, False), (False, False, False)),
+        (OperationalPolicy(True, True, True), (False, False, False)),
     ],
 )
 def test_operational_policy_matrix(
@@ -188,8 +188,9 @@ def test_require_operation_allowed_names_all_denied_requirements(tmp_path: Path)
         require_operation_allowed(config, "action.run-git-pull-ff-only")
 
     assert str(exc_info.value) == (
-        "operational policy blocks action.run-git-pull-ff-only: "
-        "allow_mutating_actions=false, allow_network_fetch=false"
+        "operation retired from steuerboard: action.run-git-pull-ff-only; "
+        "use grabowski post-merge-sync or typed git execution; "
+        "steuerboard is observation and derivation only"
     )
 
 
@@ -206,7 +207,7 @@ def test_remote_refresh_policy_denial_precedes_git_probe_and_output(tmp_path: Pa
 
     with pytest.raises(
         ValueError,
-        match=r"operational policy blocks remote-refresh\.fetch-origin-prune",
+        match=r"operation retired from steuerboard: remote-refresh\.fetch-origin-prune",
     ):
         run_fetch_origin_prune(
             repo_path=str(non_git_path),
@@ -261,7 +262,9 @@ def test_pull_cli_policy_denial_precedes_artifact_loading_and_writes_nothing(
     payload = json.loads(result.stdout)
     assert payload["status"] == "blocked"
     assert payload["blocked_reasons"] == [
-        "operational policy blocks action.run-git-pull-ff-only: allow_mutating_actions=false"
+        "operation retired from steuerboard: action.run-git-pull-ff-only; "
+        "use grabowski post-merge-sync or typed git execution; "
+        "steuerboard is observation and derivation only"
     ]
     assert not trace_out.exists()
     assert not result_out.exists()
@@ -310,7 +313,9 @@ def test_switch_cli_policy_denial_precedes_artifact_loading_and_writes_nothing(
     payload = json.loads(result.stdout)
     assert payload["status"] == "blocked"
     assert payload["blocked_reasons"] == [
-        "operational policy blocks action.run-switch-main: allow_branch_switch=false"
+        "operation retired from steuerboard: action.run-switch-main; "
+        "use grabowski worktree/repository execution; "
+        "steuerboard is observation and derivation only"
     ]
     assert not trace_out.exists()
     assert not result_out.exists()

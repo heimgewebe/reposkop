@@ -3,8 +3,7 @@
   "categories": {
     "read_only": "Reads, observes, or runs a bounded read-only command; no repository mutation and no network access.",
     "derivation_only": "Pure transformation or artifact validation producing preview/derived artifacts; no repository mutation, no network access, no execution.",
-    "fetch_only": "Performs exactly one bounded network fetch and writes evidence; no working-tree mutation.",
-    "mutating_stage_d": "Bounded Stage-D executor that performs exactly one mutating Git operation behind an action-specific readiness gate."
+    "retired_compatibility": "Compatibility command that always fails closed and points to Grabowski; it performs no network or repository mutation."
   },
   "commands": {
     "observe repo": "read_only",
@@ -30,8 +29,8 @@
     "action validate-execution-readiness": "derivation_only",
     "action validate-switch-main-readiness": "derivation_only",
     "action bind-preflight-to-action": "derivation_only",
-    "remote-refresh fetch-origin-prune": "fetch_only",
-    "action run-git-pull-ff-only": "mutating_stage_d",
-    "action run-switch-main": "mutating_stage_d"
+    "remote-refresh fetch-origin-prune": "retired_compatibility",
+    "action run-git-pull-ff-only": "retired_compatibility",
+    "action run-switch-main": "retired_compatibility"
   }
 }
