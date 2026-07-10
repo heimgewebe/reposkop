@@ -70,46 +70,40 @@ def test_check_reports_no_drift() -> None:
     assert surface.check() == []
 
 
-def test_run_git_pull_ff_only_is_mutating_stage_d() -> None:
-    # (c) the bounded Stage-D executors are the documented mutating commands.
+def test_effectful_commands_are_retired_compatibility() -> None:
     by_command = _class_by_command()
-    assert by_command["action run-git-pull-ff-only"] == "mutating_stage_d"
-    assert by_command["action run-switch-main"] == "mutating_stage_d"
-    mutating = sorted(command for command, klass in by_command.items() if klass == "mutating_stage_d")
-    assert mutating == ["action run-git-pull-ff-only", "action run-switch-main"], (
-        "expected exactly two bounded Stage-D executors"
+    retired = sorted(
+        command for command, klass in by_command.items() if klass == "retired_compatibility"
     )
-
+    assert retired == [
+        "action run-git-pull-ff-only",
+        "action run-switch-main",
+        "remote-refresh fetch-origin-prune",
+    ]
+    assert not any(klass in {"fetch_only", "mutating_stage_d"} for klass in by_command.values())
 
 def test_plan_switch_main_is_derivation_only() -> None:
     # (d) plan switch-main stays a preview-only derivation, never mutating/fetch.
     by_command = _class_by_command()
     assert by_command["plan switch-main"] == "derivation_only"
-    assert by_command["plan switch-main"] not in {"mutating_stage_d", "fetch_only"}
+    assert by_command["plan switch-main"] == "derivation_only"
 
 
-def test_smoke_and_deploy_check_are_not_mutating() -> None:
-    # (e) the smoke / deploy-check recipes must never exercise a mutating command.
+def test_smoke_and_deploy_check_do_not_invoke_retired_commands() -> None:
     by_command = _class_by_command()
-    mutating = [command for command, klass in by_command.items() if klass == "mutating_stage_d"]
-    assert mutating, "sanity: expected at least one mutating command to guard against"
-
+    retired = [command for command, klass in by_command.items() if klass == "retired_compatibility"]
     makefile_text = (surface.ROOT / "Makefile").read_text(encoding="utf-8")
     for target in ("smoke", "deploy-check"):
         body = _extract_make_target(makefile_text, target)
-        for command in mutating:
-            assert command not in body, f"{target} target must not invoke mutating {command!r}"
-            leaf = command.split()[-1]
-            assert leaf not in body, f"{target} target must not invoke mutating leaf {leaf!r}"
+        for command in retired:
+            assert command not in body
+            assert command.split()[-1] not in body
 
-
-def test_readme_states_bounded_stage_d_executor() -> None:
-    # The architectural statement is corrected, not the blanket "no mutating executor".
+def test_readme_states_observation_only_boundary() -> None:
     readme = surface.README_PATH.read_text(encoding="utf-8")
-    assert "general mutating action executor" in readme
-    assert "action run-git-pull-ff-only" in readme
-    assert "or mutating action executor." not in readme
-
+    assert "fail-closed compatibility entrypoints" in readme
+    assert "Steuerboard owns observation and readiness derivation" in readme
+    assert "docs/authority-boundary-v1.md" in readme or "Authority Boundary" in readme
 
 def test_inventory_invocation_requires_json() -> None:
     invocations = {command: invocation for command, _, invocation in surface.collect_surface()[1]}

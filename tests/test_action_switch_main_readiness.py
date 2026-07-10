@@ -572,12 +572,9 @@ def test_validate_switch_main_readiness_is_derivation_only():
     assert by_command["action validate-switch-main-readiness"] == "derivation_only"
 
 
-def test_stage_d_has_exactly_two_mutating_executors():
-    # Phase 9B added the switch-main executor; Stage D now holds exactly two
-    # bounded mutating commands and no more.
+def test_stage_d_has_no_mutating_executors():
     by_command = {command: klass for command, klass, _ in surface.collect_surface()[1]}
-    mutating = sorted(c for c, k in by_command.items() if k == "mutating_stage_d")
-    assert mutating == ["action run-git-pull-ff-only", "action run-switch-main"]
+    assert not [c for c, k in by_command.items() if k == "mutating_stage_d"]
 
 
 def test_switch_main_runner_command_exists_and_is_mutating():
@@ -586,7 +583,7 @@ def test_switch_main_runner_command_exists_and_is_mutating():
     }
     assert "action run-switch-main" in parser_commands
     by_command = {command: klass for command, klass, _ in surface.collect_surface()[1]}
-    assert by_command["action run-switch-main"] == "mutating_stage_d"
+    assert by_command["action run-switch-main"] == "retired_compatibility"
 
 
 def test_plan_switch_main_stays_derivation_only():

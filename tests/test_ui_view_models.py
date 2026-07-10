@@ -299,12 +299,9 @@ def test_schema_rejects_unknown_view_kind():
 # --------------------------------------------------------------------------- #
 
 
-def test_exactly_two_mutating_stage_d_commands():
+def test_no_mutating_stage_d_commands():
     _, rows = surface.collect_surface()
-    mutating = sorted(command for command, klass, _ in rows if klass == "mutating_stage_d")
-    assert mutating == ["action run-git-pull-ff-only", "action run-switch-main"], (
-        "Phase 10A must not add a mutating command; Stage D stays at exactly two executors"
-    )
+    assert not [command for command, klass, _ in rows if klass == "mutating_stage_d"]
 
 
 def test_cli_surface_summary_example_matches_real_counts():
@@ -316,8 +313,7 @@ def test_cli_surface_summary_example_matches_real_counts():
     view = load_json(UI_EXAMPLES_DIR / "cli-surface-summary.json")
     by_label = {row["label"]: row["value"] for row in view["summary"]}
 
-    assert by_label["mutating_stage_d"] == str(counts.get("mutating_stage_d", 0)) == "2"
+    assert by_label["retired_compatibility"] == str(counts["retired_compatibility"])
     assert by_label["read_only"] == str(counts["read_only"])
     assert by_label["derivation_only"] == str(counts["derivation_only"])
-    assert by_label["fetch_only"] == str(counts["fetch_only"])
     assert by_label["Total commands"] == str(sum(counts.values()))

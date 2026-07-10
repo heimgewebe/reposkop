@@ -19,6 +19,7 @@ The CI gate (`.github/workflows/validate.yml`) reproduces these checks for pushe
 - [Vision](docs/vision.md)
 - [Roadmap](docs/roadmap.md)
 - [Operational Profile](docs/operational-profile.md)
+- [Authority Boundary v1](docs/authority-boundary-v1.md)
 - [Operator Report Usage Probe](docs/operator-report-usage-probe.md)
 - [Falsification cases](docs/falsification-cases.md)
 
@@ -27,7 +28,7 @@ The CI gate (`.github/workflows/validate.yml`) reproduces these checks for pushe
 This repository contains documentation, JSON Schemas, examples, example validation, and read-only observation, scope, inventory, favorites, branch-drift, and assessment CLI surfaces, plus a Phase 10A read-only UI display contract and schema-validated UI view models.
 Runbook scope is read-only: `runbook run` supports `repo-sync-gate`, `dns-gate`, `ssh-gate`, `tailscale-preflight`, `server-facts-snapshot`, and `heimserver-service-gate` diagnostics that emit artifacts, not repair actions.
 
-It intentionally does **not** contain a productive fleet scanner, backend, UI beyond the Phase 10A read-only display scaffold, production fleet planner, evidence archival system, or general mutating action executor. The only mutating capabilities are exactly two bounded Stage-D executors — `action run-git-pull-ff-only` (exactly one fast-forward pull, behind a reproduced readiness gate) and `action run-switch-main` (exactly one switch to `main`, gated by a `ready` switch-main-readiness verdict plus live-state rechecks).
+It intentionally does **not** contain a productive fleet scanner, backend, UI beyond the Phase 10A read-only display scaffold, production fleet planner, evidence archival system, or general mutating action executor. The former fetch and Stage-D execution commands remain only as fail-closed compatibility entrypoints. `remote-refresh fetch-origin-prune`, `action run-git-pull-ff-only`, and `action run-switch-main` always reject execution and point callers to Grabowski. Steuerboard owns observation and readiness derivation, never Git or fleet mutation.
 
 Phase 10A adds a **read-only UI display contract** ([docs/ui-readonly-contract.md](docs/ui-readonly-contract.md)), a schema-validated UI view model (`ui-view-model.v1`) with examples derived from existing CLI/example artifacts, and a minimal dependency-free read-only frontend scaffold. It does **not** add a productive backend, a server, or any action/approval/execute UI. A UI view model is display material, not canonical repository state and not an action approval.
 
@@ -43,7 +44,7 @@ Architecture rule:
 
 > Observation ≠ Derivation ≠ Decision ≠ Action
 
-The executable CLI surface is enumerated below, generated from `steuerboard.cli.build_parser()` and an explicit capability classification (`scripts/docmeta/cli_surface.json`). Do not edit the table by hand — run `make docs` to regenerate it; the full generated reference lives in [docs/_generated/cli-surface.md](docs/_generated/cli-surface.md). Capability classes are `read_only`, `derivation_only` (preview/validation), `fetch_only` (one bounded fetch), and `mutating_stage_d` (the two bounded Stage-D executors).
+The executable CLI surface is enumerated below, generated from `steuerboard.cli.build_parser()` and an explicit capability classification (`scripts/docmeta/cli_surface.json`). Do not edit the table by hand — run `make docs` to regenerate it; the full generated reference lives in [docs/_generated/cli-surface.md](docs/_generated/cli-surface.md). Capability classes are `read_only`, `derivation_only` (preview/validation), and `retired_compatibility` (fail-closed migration entrypoints that perform no effects).
 
 <!-- BEGIN GENERATED: cli-surface -->
 | Command | Capability class | Invocation |
@@ -71,9 +72,9 @@ The executable CLI surface is enumerated below, generated from `steuerboard.cli.
 | `approval validate` | `derivation_only` | `python -m steuerboard approval validate <approval-json> --plan <plan> --checked-at <checked-at> --json` |
 | `plan git-pull-ff-only` | `derivation_only` | `python -m steuerboard plan git-pull-ff-only <assessment-json> [--remote-refresh-result <remote-refresh-result>] --json` |
 | `plan switch-main` | `derivation_only` | `python -m steuerboard plan switch-main <assessment-json> --json` |
-| `remote-refresh fetch-origin-prune` | `fetch_only` | `python -m steuerboard remote-refresh fetch-origin-prune <repo-path> --config <config> --assessment-id <assessment-id> --command-trace-out <command-trace-out> --json` |
-| `action run-git-pull-ff-only` | `mutating_stage_d` | `python -m steuerboard action run-git-pull-ff-only <action-plan-json> --config <config> --approval-validation <approval-validation> --run-evidence-chain <run-evidence-chain> --preflight-binding <preflight-binding> --repo-path <repo-path> --command-trace-out <command-trace-out> --run-result-out <run-result-out> --postcheck-out <postcheck-out> --json` |
-| `action run-switch-main` | `mutating_stage_d` | `python -m steuerboard action run-switch-main <action-plan-json> --config <config> --approval-validation <approval-validation> --switch-main-readiness <switch-main-readiness> --repo-path <repo-path> --command-trace-out <command-trace-out> --run-result-out <run-result-out> --postcheck-out <postcheck-out> --json` |
+| `action run-git-pull-ff-only` | `retired_compatibility` | `python -m steuerboard action run-git-pull-ff-only <action-plan-json> --config <config> --approval-validation <approval-validation> --run-evidence-chain <run-evidence-chain> --preflight-binding <preflight-binding> --repo-path <repo-path> --command-trace-out <command-trace-out> --run-result-out <run-result-out> --postcheck-out <postcheck-out> --json` |
+| `action run-switch-main` | `retired_compatibility` | `python -m steuerboard action run-switch-main <action-plan-json> --config <config> --approval-validation <approval-validation> --switch-main-readiness <switch-main-readiness> --repo-path <repo-path> --command-trace-out <command-trace-out> --run-result-out <run-result-out> --postcheck-out <postcheck-out> --json` |
+| `remote-refresh fetch-origin-prune` | `retired_compatibility` | `python -m steuerboard remote-refresh fetch-origin-prune <repo-path> --config <config> --assessment-id <assessment-id> --command-trace-out <command-trace-out> --json` |
 <!-- END GENERATED: cli-surface -->
 
 Observation, scope, inventory, and assessment commands are read-only: they must not plan actions, switch branches, pull, fetch, push, or mutate repositories.

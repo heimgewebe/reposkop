@@ -11,7 +11,7 @@ marked block in `README.md`. Classification lives in
 `scripts/docmeta/cli_surface.json` and is declared explicitly, never inferred
 from help text.
 
-Capability counts: read_only=16, derivation_only=7, fetch_only=1, mutating_stage_d=2.
+Capability counts: read_only=16, derivation_only=7, retired_compatibility=3.
 
 <!-- BEGIN GENERATED: cli-surface -->
 | Command | Capability class | Invocation |
@@ -39,14 +39,13 @@ Capability counts: read_only=16, derivation_only=7, fetch_only=1, mutating_stage
 | `approval validate` | `derivation_only` | `python -m steuerboard approval validate <approval-json> --plan <plan> --checked-at <checked-at> --json` |
 | `plan git-pull-ff-only` | `derivation_only` | `python -m steuerboard plan git-pull-ff-only <assessment-json> [--remote-refresh-result <remote-refresh-result>] --json` |
 | `plan switch-main` | `derivation_only` | `python -m steuerboard plan switch-main <assessment-json> --json` |
-| `remote-refresh fetch-origin-prune` | `fetch_only` | `python -m steuerboard remote-refresh fetch-origin-prune <repo-path> --config <config> --assessment-id <assessment-id> --command-trace-out <command-trace-out> --json` |
-| `action run-git-pull-ff-only` | `mutating_stage_d` | `python -m steuerboard action run-git-pull-ff-only <action-plan-json> --config <config> --approval-validation <approval-validation> --run-evidence-chain <run-evidence-chain> --preflight-binding <preflight-binding> --repo-path <repo-path> --command-trace-out <command-trace-out> --run-result-out <run-result-out> --postcheck-out <postcheck-out> --json` |
-| `action run-switch-main` | `mutating_stage_d` | `python -m steuerboard action run-switch-main <action-plan-json> --config <config> --approval-validation <approval-validation> --switch-main-readiness <switch-main-readiness> --repo-path <repo-path> --command-trace-out <command-trace-out> --run-result-out <run-result-out> --postcheck-out <postcheck-out> --json` |
+| `action run-git-pull-ff-only` | `retired_compatibility` | `python -m steuerboard action run-git-pull-ff-only <action-plan-json> --config <config> --approval-validation <approval-validation> --run-evidence-chain <run-evidence-chain> --preflight-binding <preflight-binding> --repo-path <repo-path> --command-trace-out <command-trace-out> --run-result-out <run-result-out> --postcheck-out <postcheck-out> --json` |
+| `action run-switch-main` | `retired_compatibility` | `python -m steuerboard action run-switch-main <action-plan-json> --config <config> --approval-validation <approval-validation> --switch-main-readiness <switch-main-readiness> --repo-path <repo-path> --command-trace-out <command-trace-out> --run-result-out <run-result-out> --postcheck-out <postcheck-out> --json` |
+| `remote-refresh fetch-origin-prune` | `retired_compatibility` | `python -m steuerboard remote-refresh fetch-origin-prune <repo-path> --config <config> --assessment-id <assessment-id> --command-trace-out <command-trace-out> --json` |
 <!-- END GENERATED: cli-surface -->
 
 ## Capability classes
 
 - `read_only` — Reads, observes, or runs a bounded read-only command; no repository mutation and no network access.
 - `derivation_only` — Pure transformation or artifact validation producing preview/derived artifacts; no repository mutation, no network access, no execution.
-- `fetch_only` — Performs exactly one bounded network fetch and writes evidence; no working-tree mutation.
-- `mutating_stage_d` — Bounded Stage-D executor that performs exactly one mutating Git operation behind an action-specific readiness gate.
+- `retired_compatibility` — Compatibility command that always fails closed and points to Grabowski; it performs no network or repository mutation.

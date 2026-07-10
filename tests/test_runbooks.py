@@ -1008,7 +1008,7 @@ class TestCLIAndRunner:
             cmd for cmd, cls in surface["commands"].items()
             if cls == "mutating_stage_d"
         ]
-        assert sorted(mutating) == ["action run-git-pull-ff-only", "action run-switch-main"]
+        assert sorted(mutating) == []
 
     def test_cli_error_sentinel_schema_valid_for_invalid_runbook_kind(self, tmp_path, capsys):
         plan = _valid_runbook_plan(repo_path=str(ROOT))
@@ -1781,7 +1781,7 @@ class TestNoMutationSurface:
             cmd for cmd, cls in surface["commands"].items()
             if cls == "mutating_stage_d"
         ]
-        assert sorted(mutating) == ["action run-git-pull-ff-only", "action run-switch-main"], (
+        assert sorted(mutating) == [], (
             f"Stage-D mutating executors must be exactly run-git-pull-ff-only and run-switch-main, "
             f"got: {sorted(mutating)!r}"
         )

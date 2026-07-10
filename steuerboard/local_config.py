@@ -12,6 +12,12 @@ _POLICY_FIELDS = (
     "allow_branch_switch",
     "allow_network_fetch",
 )
+_RETIRED_OPERATIONS = {
+    "remote-refresh.fetch-origin-prune": "grabowski git/fleet execution",
+    "action.run-git-pull-ff-only": "grabowski post-merge-sync or typed git execution",
+    "action.run-switch-main": "grabowski worktree/repository execution",
+}
+
 _OPERATION_REQUIREMENTS = {
     "remote-refresh.fetch-origin-prune": ("allow_network_fetch",),
     "action.run-git-pull-ff-only": (
@@ -196,6 +202,8 @@ def load_local_config(config_path: Path | None = None) -> LocalConfig:
 
 
 def operation_allowed(policy: OperationalPolicy, operation: str) -> bool:
+    if operation in _RETIRED_OPERATIONS:
+        return False
     required = _OPERATION_REQUIREMENTS.get(operation)
     if required is None:
         raise ValueError(f"unknown operational policy operation: {operation}")
@@ -204,6 +212,12 @@ def operation_allowed(policy: OperationalPolicy, operation: str) -> bool:
 
 
 def require_operation_allowed(config: LocalConfig, operation: str) -> None:
+    replacement = _RETIRED_OPERATIONS.get(operation)
+    if replacement is not None:
+        raise ValueError(
+            f"operation retired from steuerboard: {operation}; use {replacement}; "
+            "steuerboard is observation and derivation only"
+        )
     required = _OPERATION_REQUIREMENTS.get(operation)
     if required is None:
         raise ValueError(f"unknown operational policy operation: {operation}")

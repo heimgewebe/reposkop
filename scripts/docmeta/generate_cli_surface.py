@@ -41,7 +41,7 @@ BEGIN_MARKER = "<!-- BEGIN GENERATED: cli-surface -->"
 END_MARKER = "<!-- END GENERATED: cli-surface -->"
 
 # Stable rendering order for capability classes (least to most privileged).
-CATEGORY_ORDER = ["read_only", "derivation_only", "fetch_only", "mutating_stage_d"]
+CATEGORY_ORDER = ["read_only", "derivation_only", "retired_compatibility"]
 
 PROG = "python -m steuerboard"
 
