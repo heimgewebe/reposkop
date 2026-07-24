@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .model import CheckoutRole, ROLE_VALUES
+from .model import ROLE_VALUES, CheckoutRole
 
 
 def classify_role(

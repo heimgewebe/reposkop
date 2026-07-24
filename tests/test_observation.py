@@ -41,6 +41,7 @@ def test_remote_credentials_are_not_emitted(git_repo):
 
 def test_failed_status_probe_is_incomplete(git_repo, monkeypatch):
     import subprocess
+
     import reposkop.observation as module
 
     original = module._git
@@ -59,6 +60,7 @@ def test_failed_status_probe_is_incomplete(git_repo, monkeypatch):
 
 def test_git_timeout_is_reported_without_crash(git_repo, monkeypatch):
     import subprocess
+
     import reposkop.observation as module
 
     def timeout(*args, **kwargs):
@@ -73,6 +75,7 @@ def test_git_timeout_is_reported_without_crash(git_repo, monkeypatch):
 
 def test_unreviewed_git_probe_is_rejected(git_repo):
     import pytest
+
     import reposkop.observation as module
 
     with pytest.raises(ValueError, match="unsupported Git observation probe"):

@@ -55,7 +55,7 @@ def load_json(path: str | Path) -> dict[str, Any]:
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise ValueError(f"artifact is not strict UTF-8 JSON: {target}") from exc
     if not isinstance(value, dict):
-        raise ValueError("artifact root must be an object")
+        raise TypeError("artifact root must be an object")
     return value
 
 

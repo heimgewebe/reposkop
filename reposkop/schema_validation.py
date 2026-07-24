@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from functools import lru_cache
+from functools import cache
 from pathlib import Path
 from typing import Any
 
@@ -26,7 +26,7 @@ _DIGEST_BY_KIND = {
 }
 
 
-@lru_cache(maxsize=None)
+@cache
 def _schema(filename: str) -> dict[str, Any]:
     path = Path(__file__).resolve().parent / "schemas" / filename
     value = json.loads(path.read_text(encoding="utf-8"))

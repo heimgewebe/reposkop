@@ -78,7 +78,7 @@ def main(argv: list[str] | None = None) -> int:
             return 0 if result["valid"] else 2
         else:
             raise AssertionError(args.command)
-    except (OSError, ValueError, json.JSONDecodeError) as exc:
+    except (OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
         _emit({"schema_version": 1, "kind": "reposkop_error", "error": str(exc)})
         return 2
     return 0
