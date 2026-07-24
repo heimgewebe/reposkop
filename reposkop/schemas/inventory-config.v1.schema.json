@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "inventory-config.v1.schema.json",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "kind",
+    "targets"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "kind": {
+      "const": "reposkop_inventory_config"
+    },
+    "targets": {
+      "type": "array",
+      "maxItems": 200,
+      "items": {
+        "type": "object",
+        "required": [
+          "path"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^/"
+          },
+          "role": {
+            "enum": [
+              "canonical_checkout",
+              "linked_worktree",
+              "auxiliary_clone",
+              "managed_repoground_source",
+              "legacy_repobrief_source",
+              "deployment_source",
+              "grabowski_workspace",
+              "grabowski_lifecycle_worktree",
+              "unknown"
+            ]
+          },
+          "purpose": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

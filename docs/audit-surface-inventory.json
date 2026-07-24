@@ -1,0 +1,2593 @@
+{
+  "schema_version": 1,
+  "kind": "reposkop_baseline_surface_audit",
+  "baseline_commit": "28f9660f5e3237cf469826800e69ded85a9b40aa",
+  "baseline_path_count": 429,
+  "decision_counts": {
+    "keep": 3,
+    "migrate": 286,
+    "remove": 59,
+    "transform": 81
+  },
+  "entries": [
+    {
+      "path": ".github/workflows/claude.yml",
+      "decision": "keep",
+      "destination": "repository_validation",
+      "reason": "CI and dependency automation remain repository mechanics"
+    },
+    {
+      "path": ".github/workflows/validate.yml",
+      "decision": "keep",
+      "destination": "repository_validation",
+      "reason": "CI and dependency automation remain repository mechanics"
+    },
+    {
+      "path": ".gitignore",
+      "decision": "keep",
+      "destination": ".gitignore",
+      "reason": "repository mechanics or licensing remain valid"
+    },
+    {
+      "path": "Makefile",
+      "decision": "transform",
+      "destination": "Makefile",
+      "reason": "rewritten for the Reposkop package, CLI and validation contract"
+    },
+    {
+      "path": "README.md",
+      "decision": "transform",
+      "destination": "README.md",
+      "reason": "rewritten for the Reposkop package, CLI and validation contract"
+    },
+    {
+      "path": "backend/README.md",
+      "decision": "migrate",
+      "destination": "leitstand",
+      "reason": "Reposkop has no standalone UI or server; display belongs to Leitstand"
+    },
+    {
+      "path": "cli/README.md",
+      "decision": "remove",
+      "destination": null,
+      "reason": "no continuing bounded Reposkop responsibility"
+    },
+    {
+      "path": "docs/_generated/cli-surface.md",
+      "decision": "remove",
+      "destination": null,
+      "reason": "superseded historical roadmap, generated surface or operational note"
+    },
+    {
+      "path": "docs/action-model.md",
+      "decision": "migrate",
+      "destination": "grabowski/bureau docs",
+      "reason": "document describes external effect or approval ownership"
+    },
+    {
+      "path": "docs/approval-model.md",
+      "decision": "migrate",
+      "destination": "grabowski/bureau docs",
+      "reason": "document describes external effect or approval ownership"
+    },
+    {
+      "path": "docs/architecture.md",
+      "decision": "transform",
+      "destination": "docs",
+      "reason": "principle is consolidated into the new audit, architecture and integration documents"
+    },
+    {
+      "path": "docs/assessment-model.md",
+      "decision": "remove",
+      "destination": null,
+      "reason": "superseded historical roadmap, generated surface or operational note"
+    },
+    {
+      "path": "docs/authority-boundary-v1.md",
+      "decision": "transform",
+      "destination": "docs",
+      "reason": "principle is consolidated into the new audit, architecture and integration documents"
+    },
+    {
+      "path": "docs/evidence-model.md",
+      "decision": "remove",
+      "destination": null,
+      "reason": "superseded historical roadmap, generated surface or operational note"
+    },
+    {
+      "path": "docs/falsification-cases.md",
+      "decision": "transform",
+      "destination": "docs",
+      "reason": "principle is consolidated into the new audit, architecture and integration documents"
+    },
+    {
+      "path": "docs/freshness-model.md",
+      "decision": "transform",
+      "destination": "docs",
+      "reason": "principle is consolidated into the new audit, architecture and integration documents"
+    },
+    {
+      "path": "docs/git-pull-ff-only-contract.md",
+      "decision": "migrate",
+      "destination": "grabowski/bureau docs",
+      "reason": "document describes external effect or approval ownership"
+    },
+    {
+      "path": "docs/heimserver-service-gate-model.md",
+      "decision": "migrate",
+      "destination": "infra/grabowski docs",
+      "reason": "document describes host/service ownership"
+    },
+    {
+      "path": "docs/local-cli-deploy.md",
+      "decision": "remove",
+      "destination": null,
+      "reason": "superseded historical roadmap, generated surface or operational note"
+    },
+    {
+      "path": "docs/local-scope-model.md",
+      "decision": "remove",
+      "destination": null,
+      "reason": "superseded historical roadmap, generated surface or operational note"
+    },
+    {
+      "path": "docs/masterplan.md",
+      "decision": "remove",
+      "destination": null,
+      "reason": "superseded historical roadmap, generated surface or operational note"
+    },
+    {
+      "path": "docs/observation-model.md",
+      "decision": "transform",
+      "destination": "docs",
+      "reason": "principle is consolidated into the new audit, architecture and integration documents"
+    },
+    {
+      "path": "docs/omnipull-integration.md",
+      "decision": "migrate",
+      "destination": "repoground docs",
+      "reason": "document describes RepoGround publication behavior"
+    },
+    {
+      "path": "docs/operational-profile.md",
+      "decision": "remove",
+      "destination": null,
+      "reason": "superseded historical roadmap, generated surface or operational note"
+    },
+    {
+      "path": "docs/operator-report-usage-probe.md",
+      "decision": "remove",
+      "destination": null,
+      "reason": "superseded historical roadmap, generated surface or operational note"
+    },
+    {
+      "path": "docs/planning-model.md",
+      "decision": "migrate",
+      "destination": "grabowski/bureau docs",
+      "reason": "document describes external effect or approval ownership"
+    },
+    {
+      "path": "docs/redaction-model.md",
+      "decision": "transform",
+      "destination": "docs",
+      "reason": "principle is consolidated into the new audit, architecture and integration documents"
+    },
+    {
+      "path": "docs/reference/omnipull-legacy-behavior-map.md",
+      "decision": "migrate",
+      "destination": "repoground docs",
+      "reason": "document describes RepoGround publication behavior"
+    },
+    {
+      "path": "docs/reference/omnipull-legacy-command.md",
+      "decision": "migrate",
+      "destination": "repoground docs",
+      "reason": "document describes RepoGround publication behavior"
+    },
+    {
+      "path": "docs/reference/omnipull-legacy-command.sh.txt",
+      "decision": "migrate",
+      "destination": "repoground docs",
+      "reason": "document describes RepoGround publication behavior"
+    },
+    {
+      "path": "docs/remote-refresh-model.md",
+      "decision": "migrate",
+      "destination": "grabowski/bureau docs",
+      "reason": "document describes external effect or approval ownership"
+    },
+    {
+      "path": "docs/retention-model.md",
+      "decision": "remove",
+      "destination": null,
+      "reason": "superseded historical roadmap, generated surface or operational note"
+    },
+    {
+      "path": "docs/roadmap.md",
+      "decision": "remove",
+      "destination": null,
+      "reason": "superseded historical roadmap, generated surface or operational note"
+    },
+    {
+      "path": "docs/runbook-model.md",
+      "decision": "migrate",
+      "destination": "grabowski/bureau docs",
+      "reason": "document describes external effect or approval ownership"
+    },
+    {
+      "path": "docs/security-model.md",
+      "decision": "remove",
+      "destination": null,
+      "reason": "superseded historical roadmap, generated surface or operational note"
+    },
+    {
+      "path": "docs/source-of-truth-model.md",
+      "decision": "transform",
+      "destination": "docs",
+      "reason": "principle is consolidated into the new audit, architecture and integration documents"
+    },
+    {
+      "path": "docs/switch-main-readiness-contract.md",
+      "decision": "migrate",
+      "destination": "grabowski/bureau docs",
+      "reason": "document describes external effect or approval ownership"
+    },
+    {
+      "path": "docs/ui-readonly-contract.md",
+      "decision": "migrate",
+      "destination": "leitstand docs",
+      "reason": "document describes display ownership"
+    },
+    {
+      "path": "docs/vision.md",
+      "decision": "remove",
+      "destination": null,
+      "reason": "superseded historical roadmap, generated surface or operational note"
+    },
+    {
+      "path": "examples/action-approval-validations/git-pull-ff-only-binding-valid.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/action-approval-validations/git-pull-ff-only-expired.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/action-approval-validations/git-pull-ff-only-plan-mismatch.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/action-approval-validations/git-pull-ff-only-rejected.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/action-approval-validations/switch-main-binding-valid.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/action-approvals/git-pull-ff-only-approved-plan-mismatch.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/action-approvals/git-pull-ff-only-approved.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/action-approvals/git-pull-ff-only-rejected.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/action-approvals/switch-main-approved.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/action-capabilities/README.md",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/action-capabilities/git-fetch-all-prune.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/action-execution-readiness/git-pull-ff-only-blocked-expired-approval.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/action-execution-readiness/git-pull-ff-only-blocked-invalid-chain.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/action-execution-readiness/git-pull-ff-only-blocked-rejected-approval.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/action-execution-readiness/git-pull-ff-only-inconclusive-binding-unproven.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/action-execution-readiness/git-pull-ff-only-inconclusive-chain.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/action-execution-readiness/git-pull-ff-only-ready.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/action-plans/README.md",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/action-plans/git-pull-ff-only-approval-binding-base.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/action-plans/git-pull-ff-only-blocked-dirty-worktree.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/action-plans/git-pull-ff-only-blocked-non-default-branch.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/action-plans/git-pull-ff-only-blocked-remote-freshness.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/action-plans/git-status-read-only-pilot.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/action-plans/switch-main-blocked.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/action-plans/switch-main-not-applicable.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/action-preflight-bindings/git-pull-ff-only-binding-blocked-invalid-chain.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/action-preflight-bindings/git-pull-ff-only-binding-blocked-redaction-unverified.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/action-preflight-bindings/git-pull-ff-only-binding-blocked-unsupported-plan-action.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/action-preflight-bindings/git-pull-ff-only-binding-inconclusive.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/action-preflight-bindings/git-pull-ff-only-binding-invalid-plan-action-wrong.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/action-preflight-bindings/git-pull-ff-only-binding-invalid-plan-content-sha256-mismatch.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/action-preflight-bindings/git-pull-ff-only-binding-invalid-plan-ref-mismatch.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/action-preflight-bindings/git-pull-ff-only-binding-valid.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/assessment-explanations/clean-default-current.json",
+      "decision": "remove",
+      "destination": null,
+      "reason": "historical example is outside the reduced contract"
+    },
+    {
+      "path": "examples/assessment-explanations/dirty-worktree.json",
+      "decision": "remove",
+      "destination": null,
+      "reason": "historical example is outside the reduced contract"
+    },
+    {
+      "path": "examples/assessment-explanations/non-default-branch.json",
+      "decision": "remove",
+      "destination": null,
+      "reason": "historical example is outside the reduced contract"
+    },
+    {
+      "path": "examples/assessment-explanations/pull-preflight-local-clear.json",
+      "decision": "remove",
+      "destination": null,
+      "reason": "historical example is outside the reduced contract"
+    },
+    {
+      "path": "examples/assessments/README.md",
+      "decision": "transform",
+      "destination": "examples",
+      "reason": "concept is represented by the new bounded examples and tests"
+    },
+    {
+      "path": "examples/assessments/clean-default-current.json",
+      "decision": "transform",
+      "destination": "examples",
+      "reason": "concept is represented by the new bounded examples and tests"
+    },
+    {
+      "path": "examples/assessments/dirty-worktree-blocked.json",
+      "decision": "transform",
+      "destination": "examples",
+      "reason": "concept is represented by the new bounded examples and tests"
+    },
+    {
+      "path": "examples/assessments/feature-branch-clean-blocked.json",
+      "decision": "transform",
+      "destination": "examples",
+      "reason": "concept is represented by the new bounded examples and tests"
+    },
+    {
+      "path": "examples/assessments/non-default-branch-evidence-missing.json",
+      "decision": "transform",
+      "destination": "examples",
+      "reason": "concept is represented by the new bounded examples and tests"
+    },
+    {
+      "path": "examples/assessments/not-git-repo-blocked.json",
+      "decision": "transform",
+      "destination": "examples",
+      "reason": "concept is represented by the new bounded examples and tests"
+    },
+    {
+      "path": "examples/assessments/pull-preflight-local-clear-evidence-missing.json",
+      "decision": "transform",
+      "destination": "examples",
+      "reason": "concept is represented by the new bounded examples and tests"
+    },
+    {
+      "path": "examples/assessments/scope-backup-blocked.json",
+      "decision": "transform",
+      "destination": "examples",
+      "reason": "concept is represented by the new bounded examples and tests"
+    },
+    {
+      "path": "examples/branch-drift/mixed.json",
+      "decision": "remove",
+      "destination": null,
+      "reason": "historical example is outside the reduced contract"
+    },
+    {
+      "path": "examples/duplicates/minimal-duplicates.json",
+      "decision": "remove",
+      "destination": null,
+      "reason": "historical example is outside the reduced contract"
+    },
+    {
+      "path": "examples/evidence/README.md",
+      "decision": "remove",
+      "destination": null,
+      "reason": "historical example is outside the reduced contract"
+    },
+    {
+      "path": "examples/evidence/command-trace-git-pull-ff-only-success.json",
+      "decision": "remove",
+      "destination": null,
+      "reason": "historical example is outside the reduced contract"
+    },
+    {
+      "path": "examples/evidence/command-trace-read-only-pilot.json",
+      "decision": "remove",
+      "destination": null,
+      "reason": "historical example is outside the reduced contract"
+    },
+    {
+      "path": "examples/evidence/command-trace-redacted.json",
+      "decision": "remove",
+      "destination": null,
+      "reason": "historical example is outside the reduced contract"
+    },
+    {
+      "path": "examples/evidence/command-trace-switch-main-success.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/failure-cases/backup_repo_accidentally_used.json",
+      "decision": "transform",
+      "destination": "tests",
+      "reason": "failure idea is retained selectively as executable falsification tests"
+    },
+    {
+      "path": "examples/failure-cases/branch_local_only.json",
+      "decision": "transform",
+      "destination": "tests",
+      "reason": "failure idea is retained selectively as executable falsification tests"
+    },
+    {
+      "path": "examples/failure-cases/branch_remote_deleted.json",
+      "decision": "transform",
+      "destination": "tests",
+      "reason": "failure idea is retained selectively as executable falsification tests"
+    },
+    {
+      "path": "examples/failure-cases/detached_head.json",
+      "decision": "transform",
+      "destination": "tests",
+      "reason": "failure idea is retained selectively as executable falsification tests"
+    },
+    {
+      "path": "examples/failure-cases/dirty_submodule.json",
+      "decision": "transform",
+      "destination": "tests",
+      "reason": "failure idea is retained selectively as executable falsification tests"
+    },
+    {
+      "path": "examples/failure-cases/dirty_worktree.json",
+      "decision": "transform",
+      "destination": "tests",
+      "reason": "failure idea is retained selectively as executable falsification tests"
+    },
+    {
+      "path": "examples/failure-cases/dubious_ownership.json",
+      "decision": "transform",
+      "destination": "tests",
+      "reason": "failure idea is retained selectively as executable falsification tests"
+    },
+    {
+      "path": "examples/failure-cases/duplicate_repo.json",
+      "decision": "transform",
+      "destination": "tests",
+      "reason": "failure idea is retained selectively as executable falsification tests"
+    },
+    {
+      "path": "examples/failure-cases/evidence_contains_secret_like_pattern.json",
+      "decision": "transform",
+      "destination": "tests",
+      "reason": "failure idea is retained selectively as executable falsification tests"
+    },
+    {
+      "path": "examples/failure-cases/feature_branch_merged.json",
+      "decision": "transform",
+      "destination": "tests",
+      "reason": "failure idea is retained selectively as executable falsification tests"
+    },
+    {
+      "path": "examples/failure-cases/feature_branch_unmerged.json",
+      "decision": "transform",
+      "destination": "tests",
+      "reason": "failure idea is retained selectively as executable falsification tests"
+    },
+    {
+      "path": "examples/failure-cases/ff_only_not_possible.json",
+      "decision": "transform",
+      "destination": "tests",
+      "reason": "failure idea is retained selectively as executable falsification tests"
+    },
+    {
+      "path": "examples/failure-cases/foreign_owner_present.json",
+      "decision": "transform",
+      "destination": "tests",
+      "reason": "failure idea is retained selectively as executable falsification tests"
+    },
+    {
+      "path": "examples/failure-cases/gdrive_shadow_repo.json",
+      "decision": "transform",
+      "destination": "tests",
+      "reason": "failure idea is retained selectively as executable falsification tests"
+    },
+    {
+      "path": "examples/failure-cases/missing_upstream.json",
+      "decision": "transform",
+      "destination": "tests",
+      "reason": "failure idea is retained selectively as executable falsification tests"
+    },
+    {
+      "path": "examples/failure-cases/omnipull_skip_unknown_reason.json",
+      "decision": "transform",
+      "destination": "tests",
+      "reason": "failure idea is retained selectively as executable falsification tests"
+    },
+    {
+      "path": "examples/failure-cases/origin_main_stale.json",
+      "decision": "transform",
+      "destination": "tests",
+      "reason": "failure idea is retained selectively as executable falsification tests"
+    },
+    {
+      "path": "examples/failure-cases/remote_missing.json",
+      "decision": "transform",
+      "destination": "tests",
+      "reason": "failure idea is retained selectively as executable falsification tests"
+    },
+    {
+      "path": "examples/failure-cases/remote_unreachable.json",
+      "decision": "transform",
+      "destination": "tests",
+      "reason": "failure idea is retained selectively as executable falsification tests"
+    },
+    {
+      "path": "examples/failure-cases/stale_metarepo.json",
+      "decision": "transform",
+      "destination": "tests",
+      "reason": "failure idea is retained selectively as executable falsification tests"
+    },
+    {
+      "path": "examples/failure-cases/stale_omnipull_log.json",
+      "decision": "transform",
+      "destination": "tests",
+      "reason": "failure idea is retained selectively as executable falsification tests"
+    },
+    {
+      "path": "examples/failure-cases/unknown_default_branch.json",
+      "decision": "transform",
+      "destination": "tests",
+      "reason": "failure idea is retained selectively as executable falsification tests"
+    },
+    {
+      "path": "examples/failure-cases/wrong_remote.json",
+      "decision": "transform",
+      "destination": "tests",
+      "reason": "failure idea is retained selectively as executable falsification tests"
+    },
+    {
+      "path": "examples/favorites/mixed.json",
+      "decision": "remove",
+      "destination": null,
+      "reason": "historical example is outside the reduced contract"
+    },
+    {
+      "path": "examples/heimserver-service-evidence/golden-blocked-service-evidence-mismatch.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-evidence/golden-blocked-subject-mismatch.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-evidence/golden-extra-evidence-service-ignored.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-evidence/golden-inconclusive-empty-expectation.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-evidence/golden-inconclusive-evidence-status-unknown.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-evidence/golden-inconclusive-freshness-unknown.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-evidence/golden-inconclusive-no-service-evidence.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-evidence/golden-inconclusive-stale-evidence.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-evidence/golden-inconclusive-unmatched-evidence-service.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-evidence/golden-multi-service-blocked-over-inconclusive.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-evidence/golden-multi-service-blocked-precedence.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-evidence/golden-multi-service-inconclusive-precedence.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-evidence/golden-multi-service-inconclusive-reason-order.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-evidence/golden-passed-single-service-fresh.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-evidence/minimal-artifact-only.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-expectations/golden-blocked-service-evidence-mismatch.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-expectations/golden-blocked-subject-mismatch.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-expectations/golden-extra-evidence-service-ignored.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-expectations/golden-inconclusive-empty-expectation.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-expectations/golden-inconclusive-evidence-status-unknown.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-expectations/golden-inconclusive-freshness-unknown.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-expectations/golden-inconclusive-no-service-evidence.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-expectations/golden-inconclusive-stale-evidence.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-expectations/golden-inconclusive-unmatched-evidence-service.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-expectations/golden-multi-service-blocked-over-inconclusive.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-expectations/golden-multi-service-blocked-precedence.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-expectations/golden-multi-service-inconclusive-precedence.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-expectations/golden-multi-service-inconclusive-reason-order.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-expectations/golden-passed-single-service-fresh.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-expectations/minimal-tailscale.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-gate-assessments/blocked-missing-required-artifact.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-gate-assessments/blocked-service-evidence-mismatch.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-gate-assessments/golden-blocked-service-evidence-mismatch.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-gate-assessments/golden-blocked-subject-mismatch.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-gate-assessments/golden-extra-evidence-service-ignored.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-gate-assessments/golden-inconclusive-empty-expectation.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-gate-assessments/golden-inconclusive-evidence-status-unknown.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-gate-assessments/golden-inconclusive-freshness-unknown.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-gate-assessments/golden-inconclusive-no-service-evidence.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-gate-assessments/golden-inconclusive-stale-evidence.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-gate-assessments/golden-inconclusive-unmatched-evidence-service.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-gate-assessments/golden-multi-service-blocked-over-inconclusive.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-gate-assessments/golden-multi-service-blocked-precedence.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-gate-assessments/golden-multi-service-inconclusive-precedence.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-gate-assessments/golden-multi-service-inconclusive-reason-order.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-gate-assessments/golden-passed-single-service-fresh.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-gate-assessments/inconclusive-expectation-missing.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-gate-assessments/inconclusive-stale-evidence.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-gate-assessments/passed.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-gate-derivation-cases/golden-blocked-service-evidence-mismatch.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-gate-derivation-cases/golden-blocked-subject-mismatch.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-gate-derivation-cases/golden-extra-evidence-service-ignored.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-gate-derivation-cases/golden-inconclusive-empty-expectation.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-gate-derivation-cases/golden-inconclusive-evidence-status-unknown.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-gate-derivation-cases/golden-inconclusive-freshness-unknown.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-gate-derivation-cases/golden-inconclusive-no-service-evidence.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-gate-derivation-cases/golden-inconclusive-stale-evidence.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-gate-derivation-cases/golden-inconclusive-unmatched-evidence-service.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-gate-derivation-cases/golden-multi-service-blocked-over-inconclusive.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-gate-derivation-cases/golden-multi-service-blocked-precedence.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-gate-derivation-cases/golden-multi-service-inconclusive-precedence.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-gate-derivation-cases/golden-multi-service-inconclusive-reason-order.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/heimserver-service-gate-derivation-cases/golden-passed-single-service-fresh.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/inventories/minimal-inventory.json",
+      "decision": "transform",
+      "destination": "examples",
+      "reason": "concept is represented by the new bounded examples and tests"
+    },
+    {
+      "path": "examples/local-configs/README.md",
+      "decision": "remove",
+      "destination": null,
+      "reason": "historical example is outside the reduced contract"
+    },
+    {
+      "path": "examples/local-configs/heim-pc.json",
+      "decision": "remove",
+      "destination": null,
+      "reason": "historical example is outside the reduced contract"
+    },
+    {
+      "path": "examples/observations/README.md",
+      "decision": "transform",
+      "destination": "examples",
+      "reason": "concept is represented by the new bounded examples and tests"
+    },
+    {
+      "path": "examples/observations/clean-default-current-no-upstream.json",
+      "decision": "transform",
+      "destination": "examples",
+      "reason": "concept is represented by the new bounded examples and tests"
+    },
+    {
+      "path": "examples/observations/clean-default-current-tracking-behind.json",
+      "decision": "transform",
+      "destination": "examples",
+      "reason": "concept is represented by the new bounded examples and tests"
+    },
+    {
+      "path": "examples/observations/feature-branch-clean.json",
+      "decision": "transform",
+      "destination": "examples",
+      "reason": "concept is represented by the new bounded examples and tests"
+    },
+    {
+      "path": "examples/omnipull-report-refs/minimal-latest.json",
+      "decision": "migrate",
+      "destination": "repoground",
+      "reason": "publication example belongs to RepoGround"
+    },
+    {
+      "path": "examples/omnipull-reports/dirty-worktree.json",
+      "decision": "migrate",
+      "destination": "repoground",
+      "reason": "publication example belongs to RepoGround"
+    },
+    {
+      "path": "examples/omnipull-reports/mixed-run.json",
+      "decision": "migrate",
+      "destination": "repoground",
+      "reason": "publication example belongs to RepoGround"
+    },
+    {
+      "path": "examples/omnipull-reports/non-default-branch.json",
+      "decision": "migrate",
+      "destination": "repoground",
+      "reason": "publication example belongs to RepoGround"
+    },
+    {
+      "path": "examples/omnipull-run-indexes/empty.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/omnipull-run-indexes/minimal.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/omnipull-run-indexes/multiple-runs.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/operational-profiles/heim-pc.json",
+      "decision": "remove",
+      "destination": null,
+      "reason": "historical example is outside the reduced contract"
+    },
+    {
+      "path": "examples/operator-reports/daily.json",
+      "decision": "remove",
+      "destination": null,
+      "reason": "historical example is outside the reduced contract"
+    },
+    {
+      "path": "examples/recent-problem-repos/multiple-reports.json",
+      "decision": "remove",
+      "destination": null,
+      "reason": "historical example is outside the reduced contract"
+    },
+    {
+      "path": "examples/redaction-policies/README.md",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/redaction-policies/default-redaction-policy.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/remote-refresh-results/fetch-origin-prune-network-failed.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/remote-refresh-results/fetch-origin-prune-success.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/run-evidence-chains/git-status-read-only-inconclusive.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/run-evidence-chains/git-status-read-only-invalid-postcheck-failed.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/run-evidence-chains/git-status-read-only-plan-binding-unavailable.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/run-evidence-chains/git-status-read-only-valid-with-preflight-proof.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/run-evidence-chains/git-status-read-only-valid.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/run-indexes/README.md",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/run-indexes/minimal-run-index.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/run-postchecks/git-pull-ff-only-failed.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/run-postchecks/git-pull-ff-only-inconclusive.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/run-postchecks/git-pull-ff-only-passed.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/run-postchecks/git-status-read-only-failed.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/run-postchecks/git-status-read-only-inconclusive.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/run-postchecks/git-status-read-only-passed-unbound.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/run-postchecks/git-status-read-only-passed.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/run-postchecks/switch-main-passed.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/run-results/README.md",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/run-results/run-blocked.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/run-results/run-git-pull-ff-only-blocked-not-ready.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/run-results/run-git-pull-ff-only-success.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/run-results/run-read-only-blocked.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/run-results/run-read-only-success-unbound.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/run-results/run-read-only-success-with-preflight-proof.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/run-results/run-read-only-success.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/run-results/run-switch-main-blocked-not-ready.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/run-results/run-switch-main-success.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/runbook-results/dns-gate-blocked.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/runbook-results/dns-gate-inconclusive.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/runbook-results/dns-gate-passed.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/runbook-results/heimserver-service-gate-passed.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/runbook-results/repo-sync-gate-blocked.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/runbook-results/repo-sync-gate-inconclusive.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/runbook-results/repo-sync-gate-passed.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/runbook-results/server-facts-snapshot-passed.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/runbook-results/ssh-gate-blocked.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/runbook-results/ssh-gate-inconclusive.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/runbook-results/ssh-gate-passed.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/runbook-results/tailscale-preflight-blocked.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/runbook-results/tailscale-preflight-inconclusive.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/runbook-results/tailscale-preflight-passed.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/runbook-traces/dns-gate-blocked-trace.jsonl",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/runbook-traces/dns-gate-inconclusive-trace.jsonl",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/runbook-traces/dns-gate-passed-trace.jsonl",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/runbook-traces/heimserver-service-gate-passed-trace.jsonl",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/runbook-traces/repo-sync-gate-command-trace.jsonl",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/runbook-traces/server-facts-snapshot-passed-trace.jsonl",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/runbook-traces/ssh-gate-blocked-trace.jsonl",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/runbook-traces/ssh-gate-inconclusive-trace.jsonl",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/runbook-traces/ssh-gate-passed-trace.jsonl",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/runbook-traces/tailscale-preflight-blocked-trace.jsonl",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/runbook-traces/tailscale-preflight-inconclusive-trace.jsonl",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/runbook-traces/tailscale-preflight-passed-trace.jsonl",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/runbooks/dns-gate.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/runbooks/heimserver-service-gate.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/runbooks/repo-sync-gate.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/runbooks/server-facts-snapshot.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/runbooks/ssh-gate.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/runbooks/tailscale-preflight.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/scope-explanations/backup.json",
+      "decision": "remove",
+      "destination": null,
+      "reason": "historical example is outside the reduced contract"
+    },
+    {
+      "path": "examples/scope-explanations/canonical.json",
+      "decision": "remove",
+      "destination": null,
+      "reason": "historical example is outside the reduced contract"
+    },
+    {
+      "path": "examples/scope-explanations/excluded.json",
+      "decision": "remove",
+      "destination": null,
+      "reason": "historical example is outside the reduced contract"
+    },
+    {
+      "path": "examples/scope-explanations/gdrive.json",
+      "decision": "remove",
+      "destination": null,
+      "reason": "historical example is outside the reduced contract"
+    },
+    {
+      "path": "examples/scope-explanations/unknown.json",
+      "decision": "remove",
+      "destination": null,
+      "reason": "historical example is outside the reduced contract"
+    },
+    {
+      "path": "examples/server-facts/golden-blocked-service-evidence-mismatch.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/server-facts/golden-blocked-subject-mismatch.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/server-facts/golden-extra-evidence-service-ignored.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/server-facts/golden-inconclusive-empty-expectation.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/server-facts/golden-inconclusive-evidence-status-unknown.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/server-facts/golden-inconclusive-freshness-unknown.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/server-facts/golden-inconclusive-no-service-evidence.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/server-facts/golden-inconclusive-stale-evidence.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/server-facts/golden-inconclusive-unmatched-evidence-service.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/server-facts/golden-multi-service-blocked-over-inconclusive.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/server-facts/golden-multi-service-blocked-precedence.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/server-facts/golden-multi-service-inconclusive-precedence.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/server-facts/golden-multi-service-inconclusive-reason-order.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/server-facts/golden-passed-single-service-fresh.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/server-facts/minimal-linux.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service example belongs outside Reposkop"
+    },
+    {
+      "path": "examples/source-refs/README.md",
+      "decision": "transform",
+      "destination": "examples",
+      "reason": "concept is represented by the new bounded examples and tests"
+    },
+    {
+      "path": "examples/source-refs/git-current-branch.json",
+      "decision": "transform",
+      "destination": "examples",
+      "reason": "concept is represented by the new bounded examples and tests"
+    },
+    {
+      "path": "examples/switch-main-preflight-proofs/blocked-branch-unmerged.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/switch-main-preflight-proofs/blocked-dirty-worktree.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/switch-main-preflight-proofs/blocked-plan-action-mismatch.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/switch-main-preflight-proofs/blocked-plan-content-mismatch.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/switch-main-preflight-proofs/inconclusive-branch-lifecycle-unknown.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/switch-main-preflight-proofs/inconclusive-default-branch-unknown.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/switch-main-preflight-proofs/inconclusive-missing-repo-toplevel.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/switch-main-preflight-proofs/ready.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/switch-main-readiness/blocked-branch-unmerged.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/switch-main-readiness/blocked-dirty-worktree.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/switch-main-readiness/blocked-plan-action-mismatch.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/switch-main-readiness/blocked-plan-content-mismatch.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/switch-main-readiness/inconclusive-branch-lifecycle-unknown.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/switch-main-readiness/inconclusive-default-branch-unknown.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/switch-main-readiness/inconclusive-missing-repo-toplevel.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/switch-main-readiness/ready.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/ui-view-models/blocked-readiness-view.json",
+      "decision": "migrate",
+      "destination": "leitstand",
+      "reason": "display example belongs to Leitstand"
+    },
+    {
+      "path": "examples/ui-view-models/cli-surface-summary.json",
+      "decision": "migrate",
+      "destination": "leitstand",
+      "reason": "display example belongs to Leitstand"
+    },
+    {
+      "path": "examples/ui-view-models/run-switch-main-success-view.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "examples/ui-view-models/switch-main-readiness-ready-view.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "example describes external effect or approval ownership"
+    },
+    {
+      "path": "frontend/README.md",
+      "decision": "migrate",
+      "destination": "leitstand",
+      "reason": "Reposkop has no standalone UI or server; display belongs to Leitstand"
+    },
+    {
+      "path": "frontend/index.html",
+      "decision": "migrate",
+      "destination": "leitstand",
+      "reason": "Reposkop has no standalone UI or server; display belongs to Leitstand"
+    },
+    {
+      "path": "pyproject.toml",
+      "decision": "transform",
+      "destination": "pyproject.toml",
+      "reason": "rewritten for the Reposkop package, CLI and validation contract"
+    },
+    {
+      "path": "runtime/ipad-heim-pc-wol-ssh-2026-05-10.md",
+      "decision": "migrate",
+      "destination": "infra/chronik",
+      "reason": "host/network runtime history is not product source"
+    },
+    {
+      "path": "runtime/ipad-remote-access-wol-ssh-2026-05-09.md",
+      "decision": "migrate",
+      "destination": "infra/chronik",
+      "reason": "host/network runtime history is not product source"
+    },
+    {
+      "path": "runtime/net-chico-lan-throughput-2026-05-18.md",
+      "decision": "migrate",
+      "destination": "infra/chronik",
+      "reason": "host/network runtime history is not product source"
+    },
+    {
+      "path": "runtime/runtime.md",
+      "decision": "migrate",
+      "destination": "infra/chronik",
+      "reason": "host/network runtime history is not product source"
+    },
+    {
+      "path": "schemas/action-approval-validation.v1.schema.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "schema describes authority or effects outside Reposkop"
+    },
+    {
+      "path": "schemas/action-approval.v1.schema.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "schema describes authority or effects outside Reposkop"
+    },
+    {
+      "path": "schemas/action-capability.v1.schema.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "schema describes authority or effects outside Reposkop"
+    },
+    {
+      "path": "schemas/action-execution-readiness.v1.schema.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "schema describes authority or effects outside Reposkop"
+    },
+    {
+      "path": "schemas/action-plan.v1.schema.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "schema describes authority or effects outside Reposkop"
+    },
+    {
+      "path": "schemas/action-preflight-binding.v1.schema.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "schema describes authority or effects outside Reposkop"
+    },
+    {
+      "path": "schemas/command-trace.v1.schema.json",
+      "decision": "remove",
+      "destination": null,
+      "reason": "historical schema not needed by the reduced contract"
+    },
+    {
+      "path": "schemas/falsification-case.v1.schema.json",
+      "decision": "remove",
+      "destination": null,
+      "reason": "historical schema not needed by the reduced contract"
+    },
+    {
+      "path": "schemas/heimserver-service-evidence.v1.schema.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service contract belongs outside Reposkop"
+    },
+    {
+      "path": "schemas/heimserver-service-expectation.v1.schema.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service contract belongs outside Reposkop"
+    },
+    {
+      "path": "schemas/heimserver-service-gate-assessment.v1.schema.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service contract belongs outside Reposkop"
+    },
+    {
+      "path": "schemas/heimserver-service-gate-derivation-case.v1.schema.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service contract belongs outside Reposkop"
+    },
+    {
+      "path": "schemas/local-config.v1.schema.json",
+      "decision": "remove",
+      "destination": null,
+      "reason": "historical schema not needed by the reduced contract"
+    },
+    {
+      "path": "schemas/omnipull-report-ref.v1.schema.json",
+      "decision": "migrate",
+      "destination": "repoground",
+      "reason": "publication artifact belongs to RepoGround"
+    },
+    {
+      "path": "schemas/omnipull-report.v1.schema.json",
+      "decision": "migrate",
+      "destination": "repoground",
+      "reason": "publication artifact belongs to RepoGround"
+    },
+    {
+      "path": "schemas/omnipull-run-index.v1.schema.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "schema describes authority or effects outside Reposkop"
+    },
+    {
+      "path": "schemas/operational-profile.v1.schema.json",
+      "decision": "remove",
+      "destination": null,
+      "reason": "historical schema not needed by the reduced contract"
+    },
+    {
+      "path": "schemas/operator-report.v1.schema.json",
+      "decision": "remove",
+      "destination": null,
+      "reason": "historical schema not needed by the reduced contract"
+    },
+    {
+      "path": "schemas/recent-problem-repos.v1.schema.json",
+      "decision": "remove",
+      "destination": null,
+      "reason": "historical schema not needed by the reduced contract"
+    },
+    {
+      "path": "schemas/redaction-policy.v1.schema.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "schema describes authority or effects outside Reposkop"
+    },
+    {
+      "path": "schemas/remote-refresh-result.v1.schema.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "schema describes authority or effects outside Reposkop"
+    },
+    {
+      "path": "schemas/repo-assessment-explanation.v1.schema.json",
+      "decision": "transform",
+      "destination": "reposkop/schemas",
+      "reason": "concept is narrowed into the six Reposkop schemas"
+    },
+    {
+      "path": "schemas/repo-assessment.v1.schema.json",
+      "decision": "transform",
+      "destination": "reposkop/schemas",
+      "reason": "concept is narrowed into the six Reposkop schemas"
+    },
+    {
+      "path": "schemas/repo-branch-drift.v1.schema.json",
+      "decision": "remove",
+      "destination": null,
+      "reason": "historical schema not needed by the reduced contract"
+    },
+    {
+      "path": "schemas/repo-duplicates.v1.schema.json",
+      "decision": "remove",
+      "destination": null,
+      "reason": "historical schema not needed by the reduced contract"
+    },
+    {
+      "path": "schemas/repo-favorites.v1.schema.json",
+      "decision": "remove",
+      "destination": null,
+      "reason": "historical schema not needed by the reduced contract"
+    },
+    {
+      "path": "schemas/repo-inventory.v1.schema.json",
+      "decision": "transform",
+      "destination": "reposkop/schemas",
+      "reason": "concept is narrowed into the six Reposkop schemas"
+    },
+    {
+      "path": "schemas/repo-observation.v1.schema.json",
+      "decision": "transform",
+      "destination": "reposkop/schemas",
+      "reason": "concept is narrowed into the six Reposkop schemas"
+    },
+    {
+      "path": "schemas/run-evidence-chain.v1.schema.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "schema describes authority or effects outside Reposkop"
+    },
+    {
+      "path": "schemas/run-index.v1.schema.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "schema describes authority or effects outside Reposkop"
+    },
+    {
+      "path": "schemas/run-postcheck.v1.schema.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "schema describes authority or effects outside Reposkop"
+    },
+    {
+      "path": "schemas/run-result.v1.schema.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "schema describes authority or effects outside Reposkop"
+    },
+    {
+      "path": "schemas/runbook-plan.v1.schema.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "schema describes authority or effects outside Reposkop"
+    },
+    {
+      "path": "schemas/runbook-result.v1.schema.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "schema describes authority or effects outside Reposkop"
+    },
+    {
+      "path": "schemas/runbook-step-trace.v1.schema.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "schema describes authority or effects outside Reposkop"
+    },
+    {
+      "path": "schemas/scope-explanation.v1.schema.json",
+      "decision": "remove",
+      "destination": null,
+      "reason": "historical schema not needed by the reduced contract"
+    },
+    {
+      "path": "schemas/server-facts.v1.schema.json",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "host/service contract belongs outside Reposkop"
+    },
+    {
+      "path": "schemas/source-ref.v1.schema.json",
+      "decision": "transform",
+      "destination": "reposkop/schemas",
+      "reason": "concept is narrowed into the six Reposkop schemas"
+    },
+    {
+      "path": "schemas/switch-main-preflight-proof.v1.schema.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "schema describes authority or effects outside Reposkop"
+    },
+    {
+      "path": "schemas/switch-main-readiness.v1.schema.json",
+      "decision": "migrate",
+      "destination": "grabowski/bureau",
+      "reason": "schema describes authority or effects outside Reposkop"
+    },
+    {
+      "path": "schemas/ui-view-model.v1.schema.json",
+      "decision": "migrate",
+      "destination": "leitstand",
+      "reason": "display contract belongs to Leitstand"
+    },
+    {
+      "path": "scripts/docmeta/cli_surface.json",
+      "decision": "remove",
+      "destination": null,
+      "reason": "historical generation or special-case validation is no longer needed"
+    },
+    {
+      "path": "scripts/docmeta/generate_cli_surface.py",
+      "decision": "remove",
+      "destination": null,
+      "reason": "historical generation or special-case validation is no longer needed"
+    },
+    {
+      "path": "scripts/validate_examples.py",
+      "decision": "transform",
+      "destination": "scripts/validate_examples.py",
+      "reason": "reduced schema/example validation remains"
+    },
+    {
+      "path": "scripts/validate_heimserver_service_gate_derivation_cases.py",
+      "decision": "remove",
+      "destination": null,
+      "reason": "historical generation or special-case validation is no longer needed"
+    },
+    {
+      "path": "steuerboard/__init__.py",
+      "decision": "transform",
+      "destination": "steuerboard/__init__.py",
+      "reason": "narrow read-only compatibility adapter during staged rename"
+    },
+    {
+      "path": "steuerboard/__main__.py",
+      "decision": "transform",
+      "destination": "steuerboard/__main__.py",
+      "reason": "narrow read-only compatibility adapter during staged rename"
+    },
+    {
+      "path": "steuerboard/action_approval_validations.py",
+      "decision": "migrate",
+      "destination": "grabowski",
+      "reason": "effect planning, approval, preflight, execution or network Git belongs to Grabowski/Bureau"
+    },
+    {
+      "path": "steuerboard/action_execution_readiness.py",
+      "decision": "migrate",
+      "destination": "grabowski",
+      "reason": "effect planning, approval, preflight, execution or network Git belongs to Grabowski/Bureau"
+    },
+    {
+      "path": "steuerboard/action_git_pull.py",
+      "decision": "migrate",
+      "destination": "grabowski",
+      "reason": "effect planning, approval, preflight, execution or network Git belongs to Grabowski/Bureau"
+    },
+    {
+      "path": "steuerboard/action_plans.py",
+      "decision": "migrate",
+      "destination": "grabowski",
+      "reason": "effect planning, approval, preflight, execution or network Git belongs to Grabowski/Bureau"
+    },
+    {
+      "path": "steuerboard/action_preflight_bindings.py",
+      "decision": "migrate",
+      "destination": "grabowski",
+      "reason": "effect planning, approval, preflight, execution or network Git belongs to Grabowski/Bureau"
+    },
+    {
+      "path": "steuerboard/action_runs.py",
+      "decision": "migrate",
+      "destination": "grabowski",
+      "reason": "effect planning, approval, preflight, execution or network Git belongs to Grabowski/Bureau"
+    },
+    {
+      "path": "steuerboard/action_switch_main.py",
+      "decision": "migrate",
+      "destination": "grabowski",
+      "reason": "effect planning, approval, preflight, execution or network Git belongs to Grabowski/Bureau"
+    },
+    {
+      "path": "steuerboard/action_switch_main_readiness.py",
+      "decision": "migrate",
+      "destination": "grabowski",
+      "reason": "effect planning, approval, preflight, execution or network Git belongs to Grabowski/Bureau"
+    },
+    {
+      "path": "steuerboard/assessment.py",
+      "decision": "transform",
+      "destination": "reposkop",
+      "reason": "useful logic is narrowed into target roles, observation and coherence projection"
+    },
+    {
+      "path": "steuerboard/assessment_explanations.py",
+      "decision": "transform",
+      "destination": "reposkop",
+      "reason": "useful logic is narrowed into target roles, observation and coherence projection"
+    },
+    {
+      "path": "steuerboard/assessment_rules.py",
+      "decision": "transform",
+      "destination": "reposkop",
+      "reason": "useful logic is narrowed into target roles, observation and coherence projection"
+    },
+    {
+      "path": "steuerboard/branch_drift.py",
+      "decision": "transform",
+      "destination": "reposkop",
+      "reason": "useful logic is narrowed into target roles, observation and coherence projection"
+    },
+    {
+      "path": "steuerboard/canonical_json.py",
+      "decision": "transform",
+      "destination": "reposkop/canonical.py",
+      "reason": "canonical JSON and digest logic remain useful"
+    },
+    {
+      "path": "steuerboard/cli.py",
+      "decision": "transform",
+      "destination": "steuerboard/cli.py",
+      "reason": "narrow read-only compatibility adapter during staged rename"
+    },
+    {
+      "path": "steuerboard/heimserver_service_gate.py",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "service and host diagnostics belong to Infra and Grabowski"
+    },
+    {
+      "path": "steuerboard/heimserver_service_gate_artifacts.py",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "service and host diagnostics belong to Infra and Grabowski"
+    },
+    {
+      "path": "steuerboard/heimserver_service_gate_writer.py",
+      "decision": "migrate",
+      "destination": "infra/grabowski",
+      "reason": "service and host diagnostics belong to Infra and Grabowski"
+    },
+    {
+      "path": "steuerboard/inventory.py",
+      "decision": "transform",
+      "destination": "reposkop",
+      "reason": "useful logic is narrowed into target roles, observation and coherence projection"
+    },
+    {
+      "path": "steuerboard/local_config.py",
+      "decision": "remove",
+      "destination": null,
+      "reason": "no continuing role in the bounded observation library"
+    },
+    {
+      "path": "steuerboard/observation.py",
+      "decision": "transform",
+      "destination": "reposkop/observation.py",
+      "reason": "reduced to fixed read-only target observation"
+    },
+    {
+      "path": "steuerboard/omnipull_reports.py",
+      "decision": "migrate",
+      "destination": "repoground",
+      "reason": "source publication and Omnipull artifacts belong to RepoGround"
+    },
+    {
+      "path": "steuerboard/omnipull_run_indexes.py",
+      "decision": "migrate",
+      "destination": "repoground",
+      "reason": "source publication and Omnipull artifacts belong to RepoGround"
+    },
+    {
+      "path": "steuerboard/operator_report.py",
+      "decision": "remove",
+      "destination": null,
+      "reason": "no continuing role in the bounded observation library"
+    },
+    {
+      "path": "steuerboard/recent_problem_repos.py",
+      "decision": "remove",
+      "destination": null,
+      "reason": "no continuing role in the bounded observation library"
+    },
+    {
+      "path": "steuerboard/remote_refresh.py",
+      "decision": "migrate",
+      "destination": "grabowski",
+      "reason": "effect planning, approval, preflight, execution or network Git belongs to Grabowski/Bureau"
+    },
+    {
+      "path": "steuerboard/remote_refresh_results.py",
+      "decision": "migrate",
+      "destination": "grabowski",
+      "reason": "effect planning, approval, preflight, execution or network Git belongs to Grabowski/Bureau"
+    },
+    {
+      "path": "steuerboard/run_evidence_chains.py",
+      "decision": "remove",
+      "destination": null,
+      "reason": "no continuing role in the bounded observation library"
+    },
+    {
+      "path": "steuerboard/run_postchecks.py",
+      "decision": "migrate",
+      "destination": "grabowski",
+      "reason": "effect planning, approval, preflight, execution or network Git belongs to Grabowski/Bureau"
+    },
+    {
+      "path": "steuerboard/runbooks.py",
+      "decision": "migrate",
+      "destination": "grabowski",
+      "reason": "effect planning, approval, preflight, execution or network Git belongs to Grabowski/Bureau"
+    },
+    {
+      "path": "steuerboard/schema_validation.py",
+      "decision": "transform",
+      "destination": "reposkop/schema_validation.py",
+      "reason": "retained with packaged schemas and digest checks"
+    },
+    {
+      "path": "tests/fixtures/test-local-config-switch-enabled.json",
+      "decision": "remove",
+      "destination": null,
+      "reason": "historical test has no continuing product surface"
+    },
+    {
+      "path": "tests/test_action_approval_validations.py",
+      "decision": "migrate",
+      "destination": "grabowski/bureau tests",
+      "reason": "test covers effect or approval ownership outside Reposkop"
+    },
+    {
+      "path": "tests/test_action_execution_readiness.py",
+      "decision": "migrate",
+      "destination": "grabowski/bureau tests",
+      "reason": "test covers effect or approval ownership outside Reposkop"
+    },
+    {
+      "path": "tests/test_action_git_pull.py",
+      "decision": "migrate",
+      "destination": "grabowski/bureau tests",
+      "reason": "test covers effect or approval ownership outside Reposkop"
+    },
+    {
+      "path": "tests/test_action_plans.py",
+      "decision": "migrate",
+      "destination": "grabowski/bureau tests",
+      "reason": "test covers effect or approval ownership outside Reposkop"
+    },
+    {
+      "path": "tests/test_action_preflight_bindings.py",
+      "decision": "migrate",
+      "destination": "grabowski/bureau tests",
+      "reason": "test covers effect or approval ownership outside Reposkop"
+    },
+    {
+      "path": "tests/test_action_runs.py",
+      "decision": "migrate",
+      "destination": "grabowski/bureau tests",
+      "reason": "test covers effect or approval ownership outside Reposkop"
+    },
+    {
+      "path": "tests/test_action_switch_main.py",
+      "decision": "migrate",
+      "destination": "grabowski/bureau tests",
+      "reason": "test covers effect or approval ownership outside Reposkop"
+    },
+    {
+      "path": "tests/test_action_switch_main_readiness.py",
+      "decision": "migrate",
+      "destination": "grabowski/bureau tests",
+      "reason": "test covers effect or approval ownership outside Reposkop"
+    },
+    {
+      "path": "tests/test_assessment_cli.py",
+      "decision": "transform",
+      "destination": "tests",
+      "reason": "behavior is retained in the smaller target-bound test suite"
+    },
+    {
+      "path": "tests/test_assessment_explanations.py",
+      "decision": "transform",
+      "destination": "tests",
+      "reason": "behavior is retained in the smaller target-bound test suite"
+    },
+    {
+      "path": "tests/test_branch_drift_cli.py",
+      "decision": "transform",
+      "destination": "tests",
+      "reason": "behavior is retained in the smaller target-bound test suite"
+    },
+    {
+      "path": "tests/test_branch_drift_contract.py",
+      "decision": "transform",
+      "destination": "tests",
+      "reason": "behavior is retained in the smaller target-bound test suite"
+    },
+    {
+      "path": "tests/test_branch_drift_defaults.py",
+      "decision": "transform",
+      "destination": "tests",
+      "reason": "behavior is retained in the smaller target-bound test suite"
+    },
+    {
+      "path": "tests/test_branch_drift_snapshot.py",
+      "decision": "transform",
+      "destination": "tests",
+      "reason": "behavior is retained in the smaller target-bound test suite"
+    },
+    {
+      "path": "tests/test_branch_drift_states.py",
+      "decision": "transform",
+      "destination": "tests",
+      "reason": "behavior is retained in the smaller target-bound test suite"
+    },
+    {
+      "path": "tests/test_branch_drift_threshold.py",
+      "decision": "transform",
+      "destination": "tests",
+      "reason": "behavior is retained in the smaller target-bound test suite"
+    },
+    {
+      "path": "tests/test_cli_surface_docs.py",
+      "decision": "remove",
+      "destination": null,
+      "reason": "historical test has no continuing product surface"
+    },
+    {
+      "path": "tests/test_heimserver_service_evidence.py",
+      "decision": "migrate",
+      "destination": "infra/grabowski tests",
+      "reason": "test covers host/service ownership outside Reposkop"
+    },
+    {
+      "path": "tests/test_heimserver_service_expectations.py",
+      "decision": "migrate",
+      "destination": "infra/grabowski tests",
+      "reason": "test covers host/service ownership outside Reposkop"
+    },
+    {
+      "path": "tests/test_heimserver_service_gate_artifacts.py",
+      "decision": "migrate",
+      "destination": "infra/grabowski tests",
+      "reason": "test covers host/service ownership outside Reposkop"
+    },
+    {
+      "path": "tests/test_heimserver_service_gate_artifacts_evidence_preimage.py",
+      "decision": "migrate",
+      "destination": "infra/grabowski tests",
+      "reason": "test covers host/service ownership outside Reposkop"
+    },
+    {
+      "path": "tests/test_heimserver_service_gate_assessment_status_binding.py",
+      "decision": "transform",
+      "destination": "tests",
+      "reason": "behavior is retained in the smaller target-bound test suite"
+    },
+    {
+      "path": "tests/test_heimserver_service_gate_assessments.py",
+      "decision": "transform",
+      "destination": "tests",
+      "reason": "behavior is retained in the smaller target-bound test suite"
+    },
+    {
+      "path": "tests/test_heimserver_service_gate_derivation_cases.py",
+      "decision": "migrate",
+      "destination": "infra/grabowski tests",
+      "reason": "test covers host/service ownership outside Reposkop"
+    },
+    {
+      "path": "tests/test_heimserver_service_gate_producer.py",
+      "decision": "migrate",
+      "destination": "infra/grabowski tests",
+      "reason": "test covers host/service ownership outside Reposkop"
+    },
+    {
+      "path": "tests/test_heimserver_service_gate_runbook.py",
+      "decision": "migrate",
+      "destination": "grabowski/bureau tests",
+      "reason": "test covers effect or approval ownership outside Reposkop"
+    },
+    {
+      "path": "tests/test_heimserver_service_gate_writer.py",
+      "decision": "migrate",
+      "destination": "infra/grabowski tests",
+      "reason": "test covers host/service ownership outside Reposkop"
+    },
+    {
+      "path": "tests/test_heimserver_service_gate_writer_io_hardening.py",
+      "decision": "migrate",
+      "destination": "infra/grabowski tests",
+      "reason": "test covers host/service ownership outside Reposkop"
+    },
+    {
+      "path": "tests/test_inventory_cli.py",
+      "decision": "transform",
+      "destination": "tests",
+      "reason": "behavior is retained in the smaller target-bound test suite"
+    },
+    {
+      "path": "tests/test_inventory_favorites.py",
+      "decision": "transform",
+      "destination": "tests",
+      "reason": "behavior is retained in the smaller target-bound test suite"
+    },
+    {
+      "path": "tests/test_inventory_favorites_schema.py",
+      "decision": "transform",
+      "destination": "tests",
+      "reason": "behavior is retained in the smaller target-bound test suite"
+    },
+    {
+      "path": "tests/test_observation_cli.py",
+      "decision": "transform",
+      "destination": "tests",
+      "reason": "behavior is retained in the smaller target-bound test suite"
+    },
+    {
+      "path": "tests/test_observation_contract.py",
+      "decision": "transform",
+      "destination": "tests",
+      "reason": "behavior is retained in the smaller target-bound test suite"
+    },
+    {
+      "path": "tests/test_omnipull_reports.py",
+      "decision": "migrate",
+      "destination": "repoground tests",
+      "reason": "test covers publication ownership outside Reposkop"
+    },
+    {
+      "path": "tests/test_omnipull_run_indexes.py",
+      "decision": "migrate",
+      "destination": "repoground tests",
+      "reason": "test covers publication ownership outside Reposkop"
+    },
+    {
+      "path": "tests/test_operational_profile.py",
+      "decision": "remove",
+      "destination": null,
+      "reason": "historical test has no continuing product surface"
+    },
+    {
+      "path": "tests/test_operator_report.py",
+      "decision": "remove",
+      "destination": null,
+      "reason": "historical test has no continuing product surface"
+    },
+    {
+      "path": "tests/test_pull_readiness_e2e.py",
+      "decision": "remove",
+      "destination": null,
+      "reason": "historical test has no continuing product surface"
+    },
+    {
+      "path": "tests/test_recent_problem_repos.py",
+      "decision": "remove",
+      "destination": null,
+      "reason": "historical test has no continuing product surface"
+    },
+    {
+      "path": "tests/test_recent_problem_repos_cli.py",
+      "decision": "remove",
+      "destination": null,
+      "reason": "historical test has no continuing product surface"
+    },
+    {
+      "path": "tests/test_remote_refresh_cli.py",
+      "decision": "migrate",
+      "destination": "grabowski/bureau tests",
+      "reason": "test covers effect or approval ownership outside Reposkop"
+    },
+    {
+      "path": "tests/test_run_evidence_chains.py",
+      "decision": "remove",
+      "destination": null,
+      "reason": "historical test has no continuing product surface"
+    },
+    {
+      "path": "tests/test_run_postchecks.py",
+      "decision": "migrate",
+      "destination": "grabowski/bureau tests",
+      "reason": "test covers effect or approval ownership outside Reposkop"
+    },
+    {
+      "path": "tests/test_runbooks.py",
+      "decision": "migrate",
+      "destination": "grabowski/bureau tests",
+      "reason": "test covers effect or approval ownership outside Reposkop"
+    },
+    {
+      "path": "tests/test_schema_examples.py",
+      "decision": "transform",
+      "destination": "tests",
+      "reason": "behavior is retained in the smaller target-bound test suite"
+    },
+    {
+      "path": "tests/test_ui_view_models.py",
+      "decision": "migrate",
+      "destination": "leitstand tests",
+      "reason": "test covers display ownership outside Reposkop"
+    }
+  ],
+  "does_not_establish": [
+    "successful migration of external ownership by classification alone",
+    "absence of private consumers outside the audited repositories",
+    "repository rename or consumer cutover completion"
+  ]
+}

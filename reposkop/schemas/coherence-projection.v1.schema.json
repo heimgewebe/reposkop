@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "coherence-projection.v1.schema.json",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "kind",
+    "state",
+    "reasons",
+    "active_bindings",
+    "evidence_validation",
+    "effect_authorized",
+    "does_not_establish",
+    "observation_validation",
+    "projection_sha256",
+    "observation_sha256"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "kind": {
+      "const": "reposkop_coherence_projection"
+    },
+    "state": {
+      "enum": [
+        "managed_retain",
+        "protected_active",
+        "dirty_preserve",
+        "remove_candidate",
+        "archive_then_remove",
+        "inconclusive"
+      ]
+    },
+    "reasons": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "active_bindings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "evidence_validation": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "effect_authorized": {
+      "const": false
+    },
+    "does_not_establish": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "observation_validation": {
+      "type": "object"
+    },
+    "projection_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "observation_sha256": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  },
+  "additionalProperties": false
+}

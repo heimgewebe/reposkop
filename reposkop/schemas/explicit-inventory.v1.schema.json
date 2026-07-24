@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "explicit-inventory.v1.schema.json",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "kind",
+    "generated_at",
+    "target_count",
+    "discovery_performed",
+    "observations",
+    "does_not_establish",
+    "inventory_sha256"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "kind": {
+      "const": "reposkop_explicit_inventory"
+    },
+    "generated_at": {
+      "type": "string",
+      "pattern": "Z$"
+    },
+    "target_count": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 200
+    },
+    "discovery_performed": {
+      "const": false
+    },
+    "observations": {
+      "type": "array",
+      "maxItems": 200,
+      "items": {
+        "type": "object"
+      }
+    },
+    "does_not_establish": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "inventory_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  },
+  "additionalProperties": false
+}

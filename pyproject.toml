@@ -3,22 +3,19 @@ requires = ["setuptools>=69", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "steuerboard"
-version = "0.0.0"
-description = "Documentation, schemas, validation scaffolding, and read-only observation tooling for steuerboard."
+name = "reposkop"
+version = "1.0.0"
+description = "Target-bound read-only repository and checkout coherence projection for Heimgewebe."
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = [
-  "jsonschema>=4.22",
-]
+dependencies = ["jsonschema>=4.22"]
 
 [project.scripts]
+reposkop = "reposkop.cli:main"
 steuerboard = "steuerboard.cli:main"
 
 [project.optional-dependencies]
-test = [
-  "pytest>=8",
-]
+test = ["pytest>=8", "ruff>=0.6"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -28,4 +25,7 @@ pythonpath = ["."]
 line-length = 100
 
 [tool.setuptools.packages.find]
-include = ["steuerboard", "steuerboard.*"]
+include = ["reposkop", "reposkop.*", "steuerboard", "steuerboard.*"]
+
+[tool.setuptools.package-data]
+reposkop = ["schemas/*.json"]
