@@ -19,6 +19,39 @@ def test_dirty_repository_is_observed(git_repo):
     assert result["git"]["unstaged"] is True
 
 
+def test_untracked_file_is_not_misclassified_as_unstaged(git_repo):
+    (git_repo / "new.txt").write_text("new\n", encoding="utf-8")
+    result = observe_checkout(git_repo)
+    assert result["git"]["dirty"] is True
+    assert result["git"]["staged"] is False
+    assert result["git"]["unstaged"] is False
+    assert result["git"]["untracked"] is True
+    assert result["git"]["status_entry_count"] == 1
+
+
+def test_staged_rename_is_one_status_entry(git_repo):
+    import subprocess
+
+    subprocess.run(
+        ["git", "-C", str(git_repo), "mv", "file.txt", "renamed.txt"],
+        check=True,
+    )
+    result = observe_checkout(git_repo)
+    assert result["git"]["dirty"] is True
+    assert result["git"]["staged"] is True
+    assert result["git"]["unstaged"] is False
+    assert result["git"]["untracked"] is False
+    assert result["git"]["status_entry_count"] == 1
+
+
+def test_inherited_git_dir_cannot_redirect_target(git_repo, monkeypatch):
+    monkeypatch.setenv("GIT_DIR", str(git_repo / "missing-git-dir"))
+    monkeypatch.setenv("GIT_WORK_TREE", str(git_repo.parent))
+    result = observe_checkout(git_repo)
+    assert result["is_git_checkout"] is True
+    assert result["identities"]["path"] == str(git_repo.resolve())
+
+
 def test_missing_target_fails_as_data(tmp_path):
     result = observe_checkout(tmp_path / "missing")
     assert result["exists"] is False
@@ -30,7 +63,15 @@ def test_remote_credentials_are_not_emitted(git_repo):
     import subprocess
 
     subprocess.run(
-        ["git", "-C", str(git_repo), "remote", "add", "origin", "https://secret@example.invalid/owner/repo.git"],
+        [
+            "git",
+            "-C",
+            str(git_repo),
+            "remote",
+            "add",
+            "origin",
+            "https://secret@example.invalid/owner/repo.git",
+        ],
         check=True,
     )
     result = observe_checkout(git_repo)
