@@ -1,19 +1,38 @@
 # Migration from Steuerboard to Reposkop
 
-## Staged cutover
+## Repository cutover
 
-1. Land Reposkop core while keeping the `steuerboard` CLI adapter.
-2. Change Grabowski's target-bound context adapter to call `reposkop report`.
-3. Update Systemkatalog identity, relations and authority matrix.
-4. Add or update the Leitstand source-bound display adapter.
-5. Confirm no active consumer invokes removed legacy surfaces.
-6. Rename the GitHub repository from `steuerboard` to `reposkop` and update remotes, RepoGround publication identity and deployment metadata.
-7. Retain the `steuerboard` CLI adapter for one compatibility window; remove it only after consumer readback.
+The GitHub repository rename was completed on 2026-07-26:
 
-## Removed compatibility
+- former canonical identity: `heimgewebe/steuerboard`
+- canonical identity: `heimgewebe/reposkop`
+- preserved GitHub repository ID: `1232573747`
+- default branch: `main`
 
-Python imports of historical action, approval, runbook, remote-refresh, Heimserver service-gate and UI modules are intentionally not preserved. T003 established that no active consumer requires the retired mutation commands. Any newly discovered private consumer must migrate to the owning system rather than restoring duplicate authority.
+The former GitHub path may redirect to Reposkop, but redirects are compatibility only. Active configuration, documentation, manifests, bundles and adapters must use `heimgewebe/reposkop` and the canonical local checkout `${HOME}/repos/reposkop`.
 
-## Repository rename gate
+## Consumer migration
 
-The repository rename is not part of the first code commit. It occurs only after all consumer PRs are merged and the old GitHub URL redirect, local remote, RepoGround bundle identity and Systemkatalog node are read back successfully.
+Active consumers must use one of the bounded Reposkop commands:
+
+```text
+reposkop inspect <path> --json
+reposkop report <path> --json
+```
+
+Global discovery, favorites, branch-drift simulation, action recommendations, mutation and effect authorization are not Reposkop surfaces. Consumers that formerly depended on those Steuerboard commands must migrate to the system that owns the corresponding truth or effect.
+
+## Transitional compatibility
+
+The `steuerboard` CLI remains for one bounded compatibility window and supports only:
+
+```text
+steuerboard observe repo <path> --json
+steuerboard operator report --repo <path> --json
+```
+
+Every other legacy command fails closed with a migration message. The adapter may be removed only after a fresh system-wide consumer readback proves that no active caller still depends on it.
+
+## Historical evidence
+
+Historical receipts, audits, schemas, archived documentation and frozen artifacts keep their original Steuerboard bytes and names. Current documentation may identify Steuerboard as the historical predecessor of Reposkop, but must not rewrite hash-bound evidence.
