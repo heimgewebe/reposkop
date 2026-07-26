@@ -25,14 +25,21 @@ def evidence_for(observation, *, status="cleanup_candidate", bindings=None, arch
             "head": observation["git"]["head"],
             "role": observation["role"]["value"],
         },
-        "sources": [{
-            "authority": "grabowski",
-            "source_ref": "test:receipt",
-            "observed_at": captured_text,
-            "sha256": "a" * 64,
-        }],
-        "bindings": bindings or {"tasks": [], "leases": [], "processes": [], "tmux": [], "pull_requests": []},
-        "lifecycle": {"status": status, "unique_commits": False, "archive_required": archive},
+        "sources": [
+            {
+                "authority": "grabowski",
+                "source_ref": "test:receipt",
+                "observed_at": captured_text,
+                "sha256": "a" * 64,
+            }
+        ],
+        "bindings": bindings
+        or {"tasks": [], "leases": [], "processes": [], "tmux": [], "pull_requests": []},
+        "lifecycle": {
+            "status": status,
+            "unique_commits": False,
+            "archive_required": archive,
+        },
     }
 
 
@@ -45,7 +52,13 @@ def test_clean_candidate_is_only_projection(git_repo):
 
 def test_active_lease_protects(git_repo):
     observation = observe_checkout(git_repo, explicit_role="linked_worktree")
-    bindings = {"tasks": [], "leases": [{"resource_key": "path:x", "active": True}], "processes": [], "tmux": [], "pull_requests": []}
+    bindings = {
+        "tasks": [],
+        "leases": [{"resource_key": "path:x", "active": True}],
+        "processes": [],
+        "tmux": [],
+        "pull_requests": [],
+    }
     result = project_coherence(observation, evidence_for(observation, bindings=bindings))
     assert result["state"] == "protected_active"
 
@@ -85,7 +98,13 @@ def test_incomplete_observation_cannot_become_remove_candidate(git_repo):
 
 def test_stale_matching_active_binding_remains_protected(git_repo):
     observation = observe_checkout(git_repo, explicit_role="linked_worktree")
-    bindings = {"tasks": [{"id": "T1", "state": "running"}], "leases": [], "processes": [], "tmux": [], "pull_requests": []}
+    bindings = {
+        "tasks": [{"id": "T1", "state": "running"}],
+        "leases": [],
+        "processes": [],
+        "tmux": [],
+        "pull_requests": [],
+    }
     evidence = evidence_for(observation, bindings=bindings)
     evidence["captured_at"] = "2026-07-24T05:00:00Z"
     evidence["expires_at"] = "2026-07-24T05:02:00Z"
@@ -93,6 +112,19 @@ def test_stale_matching_active_binding_remains_protected(git_repo):
     result = project_coherence(observation, evidence)
     assert result["state"] == "protected_active"
     assert "active_bindings_from_stale_evidence" in result["reasons"]
+
+
+def test_rewrapped_old_source_cannot_project_cleanup(git_repo):
+    observation = observe_checkout(git_repo, explicit_role="linked_worktree")
+    evidence = evidence_for(observation)
+    captured = datetime.fromisoformat(evidence["captured_at"].replace("Z", "+00:00"))
+    evidence["sources"][0]["observed_at"] = (captured - timedelta(minutes=6)).isoformat().replace(
+        "+00:00", "Z"
+    )
+    result = project_coherence(observation, evidence)
+    assert result["state"] == "inconclusive"
+    assert "lifecycle_evidence_invalid" in result["reasons"]
+    assert "sources[0].observed_too_old" in result["evidence_validation"]["errors"]
 
 
 def test_partial_binding_shape_is_inconclusive(git_repo):
@@ -109,7 +141,9 @@ def test_excessive_evidence_ttl_is_inconclusive(git_repo):
     evidence = evidence_for(observation)
     captured = datetime.now(timezone.utc).replace(microsecond=0) - timedelta(seconds=1)
     evidence["captured_at"] = captured.isoformat().replace("+00:00", "Z")
-    evidence["expires_at"] = (captured + timedelta(minutes=30)).isoformat().replace("+00:00", "Z")
+    evidence["expires_at"] = (captured + timedelta(minutes=30)).isoformat().replace(
+        "+00:00", "Z"
+    )
     evidence["sources"][0]["observed_at"] = evidence["captured_at"]
     result = project_coherence(observation, evidence)
     assert result["state"] == "inconclusive"
