@@ -35,12 +35,50 @@ _GIT_PREFIX = [
     "protocol.file.allow=never",
 ]
 
+_GIT_ENVIRONMENT_OVERRIDES = {
+    "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+    "GIT_CEILING_DIRECTORIES",
+    "GIT_COMMON_DIR",
+    "GIT_CONFIG",
+    "GIT_CONFIG_COUNT",
+    "GIT_CONFIG_GLOBAL",
+    "GIT_CONFIG_NOSYSTEM",
+    "GIT_CONFIG_PARAMETERS",
+    "GIT_CONFIG_SYSTEM",
+    "GIT_DIR",
+    "GIT_DISCOVERY_ACROSS_FILESYSTEM",
+    "GIT_EXEC_PATH",
+    "GIT_INDEX_FILE",
+    "GIT_NAMESPACE",
+    "GIT_OBJECT_DIRECTORY",
+    "GIT_PREFIX",
+    "GIT_SHALLOW_FILE",
+    "GIT_WORK_TREE",
+}
+_GIT_ENVIRONMENT_PREFIXES = ("GIT_CONFIG_KEY_", "GIT_CONFIG_VALUE_")
+
+
+def _git_environment() -> dict[str, str]:
+    env = os.environ.copy()
+    for key in tuple(env):
+        if key in _GIT_ENVIRONMENT_OVERRIDES or key.startswith(_GIT_ENVIRONMENT_PREFIXES):
+            env.pop(key, None)
+    env.update(
+        {
+            "GIT_NO_REPLACE_OBJECTS": "1",
+            "GIT_OPTIONAL_LOCKS": "0",
+            "GIT_TERMINAL_PROMPT": "0",
+            "GCM_INTERACTIVE": "Never",
+            "LC_ALL": "C",
+            "LANG": "C",
+        }
+    )
+    return env
+
 
 def _git(path: Path, arguments: list[str], *, timeout: int = 10) -> subprocess.CompletedProcess[str]:
     if tuple(arguments) not in _ALLOWED_GIT_PROBES:
         raise ValueError(f"unsupported Git observation probe: {arguments!r}")
-    env = os.environ.copy()
-    env.update({"GIT_OPTIONAL_LOCKS": "0", "LC_ALL": "C", "LANG": "C"})
     argv = [*_GIT_PREFIX, "-C", str(path), *arguments]
     try:
         return subprocess.run(
@@ -49,9 +87,9 @@ def _git(path: Path, arguments: list[str], *, timeout: int = 10) -> subprocess.C
             capture_output=True,
             text=True,
             encoding="utf-8",
-            errors="surrogateescape",
+            errors="replace",
             timeout=timeout,
-            env=env,
+            env=_git_environment(),
         )
     except subprocess.TimeoutExpired:
         return subprocess.CompletedProcess(argv, 124, "", "git observation probe timed out")
@@ -83,6 +121,38 @@ def _remote_identity(url: str | None) -> str | None:
         value = value.split("://", 1)[1]
         value = value.split("/", 1)[1] if "/" in value else value
     return value.strip("/") or None
+
+
+def _parse_porcelain_v1_z(payload: str) -> tuple[int, bool, bool, bool, bool]:
+    records = payload.split("\0")
+    index = 0
+    count = 0
+    staged = False
+    unstaged = False
+    untracked = False
+
+    while index < len(records):
+        entry = records[index]
+        index += 1
+        if not entry:
+            continue
+        if len(entry) < 3 or entry[2] != " ":
+            raise ValueError("malformed porcelain status entry")
+
+        index_status, worktree_status = entry[0], entry[1]
+        count += 1
+        if index_status == "?" and worktree_status == "?":
+            untracked = True
+        elif index_status != "!" or worktree_status != "!":
+            staged = staged or index_status != " "
+            unstaged = unstaged or worktree_status != " "
+
+        if index_status in {"R", "C"} or worktree_status in {"R", "C"}:
+            if index >= len(records) or not records[index]:
+                raise ValueError("rename or copy status is missing its source path")
+            index += 1
+
+    return count, count > 0, staged, unstaged, untracked
 
 
 def observe_checkout(
@@ -161,16 +231,20 @@ def observe_checkout(
         observation_complete = False
     if status_result.returncode != 0:
         base["errors"].append("status_failed")
-        status_entries: list[str] = []
+        status_entry_count = 0
         dirty: bool | None = None
         staged = unstaged = untracked = None
         observation_complete = False
     else:
-        status_entries = [entry for entry in status_result.stdout.split("\0") if entry]
-        dirty = bool(status_entries)
-        staged = any(len(entry) >= 2 and entry[0] not in {" ", "?"} for entry in status_entries)
-        unstaged = any(len(entry) >= 2 and entry[1] != " " for entry in status_entries)
-        untracked = any(entry.startswith("??") for entry in status_entries)
+        try:
+            status_entry_count, dirty, staged, unstaged, untracked = _parse_porcelain_v1_z(
+                status_result.stdout
+            )
+        except ValueError:
+            base["errors"].append("status_unparseable")
+            status_entry_count = 0
+            dirty = staged = unstaged = untracked = None
+            observation_complete = False
     origin_url = _text(_git(path, ["config", "--get", "remote.origin.url"]))
     upstream = _text(
         _git(path, ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"])
@@ -213,7 +287,7 @@ def observe_checkout(
                 "staged": staged,
                 "unstaged": unstaged,
                 "untracked": untracked,
-                "status_entry_count": len(status_entries),
+                "status_entry_count": status_entry_count,
                 "upstream": upstream,
                 "ahead": ahead,
                 "behind": behind,
