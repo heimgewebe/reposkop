@@ -1,107 +1,59 @@
-# steuerboard
+# Reposkop
 
-steuerboard is a local diagnostics and planning surface for workstation repository state, source freshness, omnipull reports, evidence snapshots, and gated local actions. It is not a canonical source of truth.
+Reposkop is the deterministic, target-bound, read-only repository and checkout coherence adapter for the Heimgewebe operator ecosystem.
 
-## Local deploy
+It observes one explicitly selected repository or checkout, validates supplied lifecycle evidence, and derives a non-authoritative coherence projection. It never fetches, pulls, switches branches, changes worktrees, dispatches tasks, approves actions, or mutates host state.
 
-```sh
-python3 -m pip install -e '.[test]'
-make PYTHON=python3 deploy-check
+> Observation ≠ evidence binding ≠ projection ≠ decision ≠ effect
+
+## Authority boundary
+
+| Concern | Authority |
+| --- | --- |
+| Local repository and checkout observation | Reposkop |
+| Read-only coherence projection from supplied evidence | Reposkop |
+| Task, claim, queue and completion truth | Bureau |
+| Git, worktree, process, service and host effects | Grabowski |
+| Branch, pull-request, review and check truth | GitHub / CI |
+| Repository context bundles | RepoGround |
+| System identity and stable relations | Systemkatalog |
+| Display and orientation | Leitstand |
+
+A Reposkop state such as `remove_candidate` is an explanation, not deletion permission. Grabowski must obtain fresh authority and reproduce every live precondition before any effect.
+
+## Commands
+
+```text
+reposkop inspect <path> [--role <role>] [--purpose <text>] --json
+reposkop report <path> [--role <role>] [--purpose <text>] [--lifecycle-evidence <file>] --json
+reposkop project <observation.json> [--lifecycle-evidence <file>] --json
+reposkop inventory --config <explicit-targets.json> --json
+reposkop validate <artifact.json> --json
 ```
 
-See [docs/local-cli-deploy.md](docs/local-cli-deploy.md) for what this proves and what it does not.
+There is no implicit filesystem discovery and no global scan by default. `inventory` reads only the targets explicitly listed in its configuration.
 
-The CI gate (`.github/workflows/validate.yml`) reproduces these checks for pushes to `main` and pull requests targeting `main`.
+## Compatibility
 
-## Planning anchors
+The transitional `steuerboard` executable remains as a read-only adapter for:
 
-- [Masterplan](docs/masterplan.md)
-- [Vision](docs/vision.md)
-- [Roadmap](docs/roadmap.md)
-- [Operational Profile](docs/operational-profile.md)
-- [Authority Boundary v1](docs/authority-boundary-v1.md)
-- [Operator Report Usage Probe](docs/operator-report-usage-probe.md)
-- [Falsification cases](docs/falsification-cases.md)
+```text
+steuerboard observe repo <path> --json
+steuerboard operator report --repo <path> [--lifecycle-evidence <file>] --json
+```
 
-## Current scope
+All former mutation, approval, planning, runbook, network-refresh, service-gate and global-report surfaces fail closed with a migration message. The GitHub repository keeps its old name until all consumers have passed staged cutover readbacks.
 
-This repository contains documentation, JSON Schemas, examples, example validation, and read-only observation, scope, inventory, favorites, branch-drift, and assessment CLI surfaces, plus a Phase 10A read-only UI display contract and schema-validated UI view models.
-Runbook scope is read-only: `runbook run` supports `repo-sync-gate`, `dns-gate`, `ssh-gate`, `tailscale-preflight`, `server-facts-snapshot`, and `heimserver-service-gate` diagnostics that emit artifacts, not repair actions.
+## Validation
 
-It intentionally does **not** contain a productive fleet scanner, backend, UI beyond the Phase 10A read-only display scaffold, production fleet planner, evidence archival system, or general mutating action executor. The former fetch and Stage-D execution commands remain only as fail-closed compatibility entrypoints. `remote-refresh fetch-origin-prune`, `action run-git-pull-ff-only`, and `action run-switch-main` always reject execution and point callers to Grabowski. Steuerboard owns observation and readiness derivation, never Git or fleet mutation.
+```text
+make deploy-check
+```
 
-Phase 10A adds a **read-only UI display contract** ([docs/ui-readonly-contract.md](docs/ui-readonly-contract.md)), a schema-validated UI view model (`ui-view-model.v1`) with examples derived from existing CLI/example artifacts, and a minimal dependency-free read-only frontend scaffold. It does **not** add a productive backend, a server, or any action/approval/execute UI. A UI view model is display material, not canonical repository state and not an action approval.
+See:
 
-Phase 12A adds a **read-only repository favorites report**. Favorites are explicit local user preferences joined with the existing repository inventory; they are not observed Git facts, do not trigger additional path discovery, and do not authorise or execute actions.
-
-Phase 12C adds a **read-only branch-drift summary** over canonical repositories. It compares each locally observed branch with that repository's locally available default-branch candidate, keeps detached/unknown/failed observations separate, and triggers only an explicit user-selected count threshold. It does not fetch remotes, prove freshness, recommend repair, or authorise actions.
-
-Phase 13A adds a **fail-closed operational profile**. `local-config.v1.policy` is now enforced for bounded network refresh and both Stage-D mutation commands. `profile show` exposes effective operation gates, but never authorises an action.
-
-Phase 13B adds a **read-only operator report**. `operator report` aggregates the effective operational profile, configured favorites, local branch drift, and optionally explicitly supplied Omnipull problem reports. It performs no Omnipull discovery, no fetch, no mutation, no repair recommendation, and no action authorisation.
-
-Architecture rule:
-
-> Observation ≠ Derivation ≠ Decision ≠ Action
-
-The executable CLI surface is enumerated below, generated from `steuerboard.cli.build_parser()` and an explicit capability classification (`scripts/docmeta/cli_surface.json`). Do not edit the table by hand — run `make docs` to regenerate it; the full generated reference lives in [docs/_generated/cli-surface.md](docs/_generated/cli-surface.md). Capability classes are `read_only`, `derivation_only` (preview/validation), and `retired_compatibility` (fail-closed migration entrypoints that perform no effects).
-
-<!-- BEGIN GENERATED: cli-surface -->
-| Command | Capability class | Invocation |
-| --- | --- | --- |
-| `action postcheck-read-only` | `read_only` | `python -m steuerboard action postcheck-read-only <run-result-json> --command-trace <command-trace> --repo-path <repo-path> --postcheck-out <postcheck-out> --json` |
-| `action run-read-only` | `read_only` | `python -m steuerboard action run-read-only <action-plan-json> --repo-path <repo-path> --command-trace-out <command-trace-out> --run-result-out <run-result-out> [--preflight-for-action-plan <preflight-for-action-plan>] --json` |
-| `assess explain` | `read_only` | `python -m steuerboard assess explain <assessment-json> --json` |
-| `assess repo` | `read_only` | `python -m steuerboard assess repo <path> [--config <config>] --json` |
-| `inventory` | `read_only` | `python -m steuerboard inventory [--config <config>] --json` |
-| `inventory branch-drift` | `read_only` | `python -m steuerboard inventory branch-drift [--config <config>] --warning-threshold <warning-threshold> --json` |
-| `inventory duplicates` | `read_only` | `python -m steuerboard inventory duplicates [--config <config>] --json` |
-| `inventory favorites` | `read_only` | `python -m steuerboard inventory favorites [--config <config>] --json` |
-| `observe repo` | `read_only` | `python -m steuerboard observe repo <path> --json` |
-| `omnipull-report latest` | `read_only` | `python -m steuerboard omnipull-report latest <run-index-json> --json` |
-| `omnipull-report recent-problems` | `read_only` | `python -m steuerboard omnipull-report recent-problems <report-json> [--limit <limit>] --json` |
-| `omnipull-report show` | `read_only` | `python -m steuerboard omnipull-report show <report-json> --json` |
-| `operator report` | `read_only` | `python -m steuerboard operator report [--config <config>] --branch-warning-threshold <branch-warning-threshold> [--omnipull-report <omnipull-report>] [--recent-problem-limit <recent-problem-limit>] --json` |
-| `profile show` | `read_only` | `python -m steuerboard profile show [--config <config>] --json` |
-| `runbook run` | `read_only` | `python -m steuerboard runbook run <runbook-plan-json> --result-out <result-out> --command-trace-out <command-trace-out> --json` |
-| `scope explain` | `read_only` | `python -m steuerboard scope explain <path> [--config <config>] --json` |
-| `action bind-preflight-to-action` | `derivation_only` | `python -m steuerboard action bind-preflight-to-action <action-plan-json> --run-evidence-chain <run-evidence-chain> --binding-out <binding-out> --json` |
-| `action validate-execution-readiness` | `derivation_only` | `python -m steuerboard action validate-execution-readiness <action-plan-json> --approval-validation <approval-validation> --run-evidence-chain <run-evidence-chain> --readiness-out <readiness-out> [--preflight-binding <preflight-binding>] --json` |
-| `action validate-run-chain` | `derivation_only` | `python -m steuerboard action validate-run-chain <action-plan-json> --command-trace <command-trace> --run-result <run-result> --run-postcheck <run-postcheck> --chain-out <chain-out> --json` |
-| `action validate-switch-main-readiness` | `derivation_only` | `python -m steuerboard action validate-switch-main-readiness <action-plan-json> --preflight-proof <preflight-proof> --readiness-out <readiness-out> --json` |
-| `approval validate` | `derivation_only` | `python -m steuerboard approval validate <approval-json> --plan <plan> --checked-at <checked-at> --json` |
-| `plan git-pull-ff-only` | `derivation_only` | `python -m steuerboard plan git-pull-ff-only <assessment-json> [--remote-refresh-result <remote-refresh-result>] --json` |
-| `plan switch-main` | `derivation_only` | `python -m steuerboard plan switch-main <assessment-json> --json` |
-| `action run-git-pull-ff-only` | `retired_compatibility` | `python -m steuerboard action run-git-pull-ff-only <action-plan-json> --config <config> --approval-validation <approval-validation> --run-evidence-chain <run-evidence-chain> --preflight-binding <preflight-binding> --repo-path <repo-path> --command-trace-out <command-trace-out> --run-result-out <run-result-out> --postcheck-out <postcheck-out> --json` |
-| `action run-switch-main` | `retired_compatibility` | `python -m steuerboard action run-switch-main <action-plan-json> --config <config> --approval-validation <approval-validation> --switch-main-readiness <switch-main-readiness> --repo-path <repo-path> --command-trace-out <command-trace-out> --run-result-out <run-result-out> --postcheck-out <postcheck-out> --json` |
-| `remote-refresh fetch-origin-prune` | `retired_compatibility` | `python -m steuerboard remote-refresh fetch-origin-prune <repo-path> --config <config> --assessment-id <assessment-id> --command-trace-out <command-trace-out> --json` |
-<!-- END GENERATED: cli-surface -->
-
-Observation, scope, inventory, and assessment commands are read-only: they must not plan actions, switch branches, pull, fetch, push, or mutate repositories.
-
-The `plan switch-main` command emits a preview-only plan artifact from an existing assessment. It does not execute Git, does not mutate repositories, and does not authorise actions.
-It is a pure transformation from `repo-assessment.v1` to `action-plan.v1` and does not provide command advice.
-
-The `plan git-pull-ff-only` command emits a preview-only plan artifact for fast-forward-only Git pulls from an existing assessment. It does not execute Git, does not mutate repositories, does not fetch or pull, and does not authorise actions.
-It is a pure transformation from `repo-assessment.v1` to `action-plan.v1` and blocks on missing remote freshness evidence or other pull-blocking conditions.
-This slice remains preview-only and does not provide execution permission.
-
-The `remote-refresh fetch-origin-prune` command is Stage B fetch-only evidence production. It runs exactly one bounded command (`git fetch origin --prune`), writes a redacted `command-trace.v1` artifact, and emits `remote-refresh-result.v1`.
-It does not perform pull, merge, switch, reset, clean, generic command execution, or action authorization.
-
-The `omnipull-report show` command is a read-only artifact adapter: it loads exactly one provided
-`omnipull-report.v1` JSON file and emits a validated report artifact. It does not implement
-filesystem search, does not search `/home/alex/logs/omnipull`, does not execute Git, does not mutate
-repositories, does not execute actions, does not authorise actions, and does not generate new plans
-from Omnipull report input in this slice.
-The artifact `source_path` must match the explicit path provided to the loader.
-This match is lexical for this slice (`./examples/x.json` and `examples/x.json` are different strings).
-`repos: []` is valid and represents an empty run artifact.
-
-The `omnipull-report latest` command operates on **exactly one** explicit `omnipull-run-index.v1`
-JSON file. It selects the newest report entry (by `generated_at`, with `run_id` as lexicographic
-tie-break) and emits a bounded `omnipull-report-ref.v1` artifact. It never scans the filesystem,
-never auto-loads the referenced report file, never calls Git, never accesses the network, and never
-authorises actions. There is no automatic discovery, no glob, no path search under
-`/home/alex/logs/omnipull`. The run-index's `source_path` must lexically match the explicit path
-passed on the command line.
+- [Architecture audit](docs/audit-2026-07-24.md)
+- [Architecture](docs/architecture.md)
+- [Integration contract](docs/integration.md)
+- [Automation decision](docs/automation.md)
+- [Migration plan](docs/migration.md)

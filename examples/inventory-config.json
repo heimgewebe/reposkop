@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "kind": "reposkop_inventory_config",
+  "targets": [
+    {"path": "/home/alex/repos/steuerboard", "role": "canonical_checkout", "purpose": "transitional Reposkop source repository"}
+  ]
+}

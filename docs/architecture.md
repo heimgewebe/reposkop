@@ -1,30 +1,53 @@
-# Architecture
+# Reposkop architecture
 
-steuerboard is layered so display and action cannot masquerade as truth.
+Status: normative.
 
-```text
-steuerboard
-├─ 1. Falsification Layer
-├─ 2. Observation Layer
-├─ 3. Source Layer
-├─ 4. Assessment Layer
-├─ 5. Planning Layer
-├─ 6. Evidence Layer
-├─ 7. Action Layer
-└─ 8. UI Layer
-```
+Reposkop has four layers only:
 
-## Layer boundaries
+1. **Target selection** — exactly one path or an explicit bounded target list.
+2. **Observation** — fixed read-only Git commands and path identity.
+3. **Evidence binding** — validation of externally supplied, versioned, digest- and freshness-bound lifecycle evidence.
+4. **Projection** — deterministic explanation with no effect authority.
 
-1. **Falsification Layer**: describes what can break before naming statuses.
-2. **Observation Layer**: records read-only local facts and command results.
-3. **Source Layer**: records origin, freshness, and authority of each fact.
-4. **Assessment Layer**: derives statuses from observations and rules.
-5. **Planning Layer**: simulates actions and identifies missing evidence.
-6. **Evidence Layer**: stores redacted traces with retention rules.
-7. **Action Layer**: remains gated and future-only.
-8. **UI Layer**: renders CLI-equivalent results without independent logic.
+The old Action, Approval, Execution, Runbook, Service-Gate and standalone UI layers are removed. They duplicated responsibilities already owned by Grabowski, Bureau, Infra and Leitstand.
 
-## Phase 0b boundary
+## Identity axes
 
-Only layers 1 and the schema/documentation foundations for layers 2 through 6 are represented here. There is no productive repo scanner, no backend, no UI, and no action executor.
+Reposkop keeps these identities separate:
+
+- path identity;
+- Git toplevel and Git common-directory identity;
+- remote repository identity;
+- purpose identity;
+- checkout role.
+
+Two paths can belong to the same Git repository and still have different purposes and lifecycle owners. Conversely, matching remote URLs do not prove that two checkouts are interchangeable.
+
+## Checkout roles
+
+- `canonical_checkout`
+- `linked_worktree`
+- `auxiliary_clone`
+- `managed_repoground_source`
+- `legacy_repobrief_source`
+- `deployment_source`
+- `grabowski_workspace`
+- `grabowski_lifecycle_worktree`
+- `unknown`
+
+Explicit source-bound role input overrides heuristics. Heuristics are explanations, not ownership truth.
+
+## Projection states
+
+- `managed_retain`
+- `protected_active`
+- `dirty_preserve`
+- `remove_candidate`
+- `archive_then_remove`
+- `inconclusive`
+
+All states are non-authoritative. `remove_candidate` means only that the supplied evidence currently contains no represented blocker. It never means that absence of a blocker has been proven globally.
+
+## Evidence freshness bound
+
+Lifecycle evidence has a maximum five-minute validity interval. Longer envelopes are invalid, not merely stale. Every embedded source observation must also be no more than five minutes older than the envelope capture time; an old authority readback cannot become current merely by being wrapped in a fresh envelope. A digest inside a source reference is a binding claim supplied by the authority; Reposkop validates its shape and envelope binding but does not independently reproduce the authority's private source state.

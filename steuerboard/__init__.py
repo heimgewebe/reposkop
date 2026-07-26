@@ -1,3 +1,5 @@
-"""steuerboard package."""
+"""Read-only compatibility namespace for the former Steuerboard name."""
 
-__version__ = "0.0.0"
+from reposkop import __version__
+
+__all__ = ["__version__"]

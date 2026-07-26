@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "kind": "reposkop_lifecycle_evidence",
+  "captured_at": "2026-07-24T05:00:00Z",
+  "expires_at": "2099-07-24T05:05:00Z",
+  "subject": {"path": "/tmp/example", "git_common_dir": null, "remote": null, "head": null, "role": "linked_worktree"},
+  "sources": [{"authority": "grabowski", "source_ref": "example:receipt", "observed_at": "2026-07-24T05:00:00Z", "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}],
+  "bindings": {"tasks": [], "leases": [], "processes": [], "tmux": [], "pull_requests": []},
+  "lifecycle": {"status": "cleanup_candidate", "unique_commits": false, "archive_required": false}
+}
