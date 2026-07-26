@@ -50,4 +50,4 @@ All states are non-authoritative. `remove_candidate` means only that the supplie
 
 ## Evidence freshness bound
 
-Lifecycle evidence has a maximum five-minute validity interval. Longer envelopes are invalid, not merely stale. A digest inside a source reference is a binding claim supplied by the authority; Reposkop validates its shape and envelope binding but does not independently reproduce the authority's private source state.
+Lifecycle evidence has a maximum five-minute validity interval. Longer envelopes are invalid, not merely stale. Every embedded source observation must also be no more than five minutes older than the envelope capture time; an old authority readback cannot become current merely by being wrapped in a fresh envelope. A digest inside a source reference is a binding claim supplied by the authority; Reposkop validates its shape and envelope binding but does not independently reproduce the authority's private source state.
