@@ -2,6 +2,8 @@
 
 Reposkop is the deterministic, target-bound, read-only repository and checkout coherence adapter for the Heimgewebe operator ecosystem.
 
+Canonical repository: `https://github.com/heimgewebe/reposkop` (GitHub repository ID `1232573747`). The former `heimgewebe/steuerboard` path is redirect compatibility only and is not a canonical system identity.
+
 It observes one explicitly selected repository or checkout, validates supplied lifecycle evidence, and derives a non-authoritative coherence projection. It never fetches, pulls, switches branches, changes worktrees, dispatches tasks, approves actions, or mutates host state.
 
 > Observation ≠ evidence binding ≠ projection ≠ decision ≠ effect
@@ -19,7 +21,7 @@ It observes one explicitly selected repository or checkout, validates supplied l
 | System identity and stable relations | Systemkatalog |
 | Display and orientation | Leitstand |
 
-A Reposkop state such as `remove_candidate` is an explanation, not deletion permission. Grabowski must obtain fresh authority and reproduce every live precondition before any effect.
+A Reposkop state such as `remove_candidate` is an explanation, not deletion permission. Grabowski must obtain fresh authority and reproduce every live precondition before any effect. Reposkop reports therefore keep `effect_authorized` fixed to `false`.
 
 ## Commands
 
@@ -35,14 +37,14 @@ There is no implicit filesystem discovery and no global scan by default. `invent
 
 ## Compatibility
 
-The transitional `steuerboard` executable remains as a read-only adapter for:
+The transitional `steuerboard` executable remains as a narrow, read-only adapter for:
 
 ```text
 steuerboard observe repo <path> --json
 steuerboard operator report --repo <path> [--lifecycle-evidence <file>] --json
 ```
 
-All former mutation, approval, planning, runbook, network-refresh, service-gate and global-report surfaces fail closed with a migration message. The GitHub repository keeps its old name until all consumers have passed staged cutover readbacks.
+All former mutation, approval, planning, runbook, network-refresh, service-gate and global-report surfaces fail closed with a migration message. The compatibility adapter is retained only for the bounded migration window documented in [Migration](docs/migration.md); it does not preserve the old repository identity or authority model.
 
 ## Validation
 
@@ -56,4 +58,4 @@ See:
 - [Architecture](docs/architecture.md)
 - [Integration contract](docs/integration.md)
 - [Automation decision](docs/automation.md)
-- [Migration plan](docs/migration.md)
+- [Migration status](docs/migration.md)
