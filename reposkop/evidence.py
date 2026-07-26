@@ -16,6 +16,7 @@ _SHA_RE = re.compile(r"^[0-9a-f]{64}$")
 _BINDING_KEYS = ("tasks", "leases", "processes", "tmux", "pull_requests")
 _MAX_ARTIFACT_BYTES = 2_000_000
 _MAX_EVIDENCE_TTL = timedelta(minutes=5)
+_MAX_SOURCE_AGE = timedelta(minutes=5)
 
 
 def load_json(path: str | Path) -> dict[str, Any]:
@@ -95,14 +96,20 @@ def validate_lifecycle_evidence(value: dict[str, Any]) -> dict[str, Any]:
             if not isinstance(source, dict):
                 errors.append(f"sources[{index}]")
                 continue
-            if not all(isinstance(source.get(key), str) and source.get(key) for key in ("authority", "source_ref", "observed_at")):
+            if not all(
+                isinstance(source.get(key), str) and source.get(key)
+                for key in ("authority", "source_ref", "observed_at")
+            ):
                 errors.append(f"sources[{index}].identity")
             if source.get("authority") in {"grabowski", "bureau"}:
                 lifecycle_authority_present = True
             try:
                 source_observed = parse_utc(source.get("observed_at"))
-                if captured is not None and source_observed > captured:
-                    errors.append(f"sources[{index}].observed_after_capture")
+                if captured is not None:
+                    if source_observed > captured:
+                        errors.append(f"sources[{index}].observed_after_capture")
+                    elif captured - source_observed > _MAX_SOURCE_AGE:
+                        errors.append(f"sources[{index}].observed_too_old")
                 if source_observed > datetime.now(timezone.utc):
                     errors.append(f"sources[{index}].observed_in_future")
             except (TypeError, ValueError):
