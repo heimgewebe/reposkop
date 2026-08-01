@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "checkout-continuity.v1.schema.json",
+  "type": "object",
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "nullableSha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"}
+  },
+  "required": [
+    "schema_version",
+    "kind",
+    "generated_at",
+    "authority",
+    "state",
+    "transition",
+    "transition_sha256",
+    "reason_codes",
+    "effect_authorized",
+    "does_not_establish",
+    "continuity_sha256"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "kind": {"const": "reposkop_checkout_continuity"},
+    "generated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "authority": {
+      "type": "object",
+      "required": ["producer", "domain", "claim"],
+      "properties": {
+        "producer": {"const": "reposkop"},
+        "domain": {"const": "local_checkout_continuity"},
+        "claim": {"const": "canonical"}
+      },
+      "additionalProperties": false
+    },
+    "state": {
+      "enum": ["intact", "explainable_drift", "identity_break", "inconclusive"]
+    },
+    "transition": {"type": "object"},
+    "transition_sha256": {"$ref": "#/$defs/nullableSha256"},
+    "reason_codes": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"}
+    },
+    "effect_authorized": {"const": false},
+    "does_not_establish": {"type": "array", "items": {"type": "string"}},
+    "continuity_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "additionalProperties": false
+}
