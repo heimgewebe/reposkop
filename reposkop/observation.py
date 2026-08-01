@@ -5,6 +5,7 @@ import os
 import subprocess
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 from .canonical import sha256_json
 from .roles import classify_role
@@ -113,15 +114,23 @@ def _resolve_git_path(base: Path, value: str | None) -> Path | None:
 
 
 def _remote_identity(url: str | None) -> str | None:
-    if not url:
+    if not url or not url.strip():
         return None
-    value = url.removesuffix(".git")
-    if value.startswith("git@") and ":" in value:
-        value = value.split(":", 1)[1]
-    elif "://" in value:
-        value = value.split("://", 1)[1]
-        value = value.split("/", 1)[1] if "/" in value else value
-    return value.strip("/") or None
+    value = url.strip()
+    if "://" in value:
+        parsed = urlsplit(value)
+        path = parsed.path.removesuffix(".git").strip("/")
+        if parsed.hostname:
+            host = parsed.hostname.lower()
+            return f"{host}/{path}" if path else host
+        if parsed.scheme == "file":
+            return f"file:{parsed.path.removesuffix('.git')}"
+    prefix, separator, path = value.partition(":")
+    if separator and "@" in prefix and "/" not in prefix:
+        host = prefix.rsplit("@", 1)[1].lower()
+        normalized_path = path.removesuffix(".git").strip("/")
+        return f"{host}/{normalized_path}" if normalized_path else host
+    return f"local:{value.removesuffix('.git').rstrip('/')}"
 
 
 def _parse_porcelain_v1_z(payload: str) -> tuple[int, bool, bool, bool, bool]:
@@ -311,6 +320,14 @@ def observe_checkout(
     target_identity = _stat_identity(toplevel)
     git_dir_identity = _stat_identity(git_dir)
     common_dir_identity = _stat_identity(common_dir)
+    for label, identity in (
+        ("target_identity_unavailable", target_identity),
+        ("git_dir_identity_unavailable", git_dir_identity),
+        ("git_common_dir_identity_unavailable", common_dir_identity),
+    ):
+        if identity is None:
+            base["errors"].append(label)
+            observation_complete = False
     checkout_identity_material = {
         "target": target_identity,
         "git_dir": git_dir_identity,
