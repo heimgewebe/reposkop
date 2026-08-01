@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from copy import deepcopy
 import subprocess
+from copy import deepcopy
 
 from reposkop.canonical import sha256_json
 from reposkop.observation import observe_checkout
