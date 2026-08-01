@@ -13,13 +13,19 @@
     "report_sha256"
   ],
   "properties": {
-    "schema_version": {"const": 1},
-    "kind": {"const": "reposkop_coherence_report"},
+    "schema_version": {
+      "const": 1
+    },
+    "kind": {
+      "const": "reposkop_coherence_report"
+    },
     "generated_at": {
       "type": "string",
       "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
     },
-    "observation": {"type": "object"},
+    "observation": {
+      "type": "object"
+    },
     "projection": {
       "type": "object",
       "required": [
@@ -35,8 +41,12 @@
         "observation_sha256"
       ],
       "properties": {
-        "schema_version": {"const": 1},
-        "kind": {"const": "reposkop_coherence_projection"},
+        "schema_version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "reposkop_coherence_projection"
+        },
         "state": {
           "enum": [
             "managed_retain",
@@ -47,15 +57,45 @@
             "inconclusive"
           ]
         },
-        "reasons": {"type": "array", "items": {"type": "string"}},
-        "active_bindings": {"type": "array", "items": {"type": "string"}},
-        "evidence_validation": {"type": ["object", "null"]},
-        "effect_authorized": {"const": false},
-        "does_not_establish": {"type": "array", "items": {"type": "string"}},
-        "observation_validation": {"type": "object"},
-        "projection_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "reasons": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "active_bindings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "evidence_validation": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "effect_authorized": {
+          "const": false
+        },
+        "does_not_establish": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "observation_validation": {
+          "type": "object"
+        },
+        "projection_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
         "observation_sha256": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "pattern": "^[0-9a-f]{64}$"
         }
       },
@@ -64,25 +104,38 @@
     "authority_boundary": {
       "type": "object",
       "required": [
-        "checkout_identity_truth",
-        "checkout_transition_truth",
+        "observer",
         "effect_executor",
         "task_truth",
         "pull_request_truth",
         "display"
       ],
       "properties": {
-        "checkout_identity_truth": {"const": "reposkop"},
-        "checkout_transition_truth": {"const": "reposkop"},
-        "effect_executor": {"const": "grabowski"},
-        "task_truth": {"const": "bureau"},
-        "pull_request_truth": {"const": "github"},
-        "display": {"const": "leitstand"}
+        "observer": {
+          "const": "reposkop"
+        },
+        "effect_executor": {
+          "const": "grabowski"
+        },
+        "task_truth": {
+          "const": "bureau"
+        },
+        "pull_request_truth": {
+          "const": "github"
+        },
+        "display": {
+          "const": "leitstand"
+        }
       },
       "additionalProperties": false
     },
-    "effect_authorized": {"const": false},
-    "report_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+    "effect_authorized": {
+      "const": false
+    },
+    "report_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
   },
   "additionalProperties": false
 }
