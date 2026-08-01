@@ -78,10 +78,14 @@ def _git_environment() -> dict[str, str]:
     return env
 
 
-def _git(path: Path, arguments: list[str], *, timeout: int = 10) -> subprocess.CompletedProcess[str]:
+def _git_argv(path: Path, arguments: list[str]) -> list[str]:
     if tuple(arguments) not in _ALLOWED_GIT_PROBES:
         raise ValueError(f"unsupported Git observation probe: {arguments!r}")
-    argv = [*_GIT_PREFIX, "-C", str(path), *arguments]
+    return [*_GIT_PREFIX, "-C", str(path), *arguments]
+
+
+def _git(path: Path, arguments: list[str], *, timeout: int = 10) -> subprocess.CompletedProcess[str]:
+    argv = _git_argv(path, arguments)
     try:
         return subprocess.run(
             argv,
@@ -95,6 +99,30 @@ def _git(path: Path, arguments: list[str], *, timeout: int = 10) -> subprocess.C
         )
     except subprocess.TimeoutExpired:
         return subprocess.CompletedProcess(argv, 124, "", "git observation probe timed out")
+
+
+def _git_bytes(
+    path: Path,
+    arguments: list[str],
+    *,
+    timeout: int = 10,
+) -> subprocess.CompletedProcess[bytes]:
+    argv = _git_argv(path, arguments)
+    try:
+        return subprocess.run(
+            argv,
+            check=False,
+            capture_output=True,
+            timeout=timeout,
+            env=_git_environment(),
+        )
+    except subprocess.TimeoutExpired:
+        return subprocess.CompletedProcess(
+            argv,
+            124,
+            b"",
+            b"git observation probe timed out",
+        )
 
 
 def _text(result: subprocess.CompletedProcess[str]) -> str | None:
@@ -133,8 +161,8 @@ def _remote_identity(url: str | None) -> str | None:
     return f"local:{value.removesuffix('.git').rstrip('/')}"
 
 
-def _parse_porcelain_v1_z(payload: str) -> tuple[int, bool, bool, bool, bool]:
-    records = payload.split("\0")
+def _parse_porcelain_v1_z(payload: bytes) -> tuple[int, bool, bool, bool, bool]:
+    records = payload.split(b"\0")
     index = 0
     count = 0
     staged = False
@@ -146,18 +174,18 @@ def _parse_porcelain_v1_z(payload: str) -> tuple[int, bool, bool, bool, bool]:
         index += 1
         if not entry:
             continue
-        if len(entry) < 3 or entry[2] != " ":
+        if len(entry) < 3 or entry[2] != ord(" "):
             raise ValueError("malformed porcelain status entry")
 
         index_status, worktree_status = entry[0], entry[1]
         count += 1
-        if index_status == "?" and worktree_status == "?":
+        if index_status == ord("?") and worktree_status == ord("?"):
             untracked = True
-        elif index_status != "!" or worktree_status != "!":
-            staged = staged or index_status != " "
-            unstaged = unstaged or worktree_status != " "
+        elif index_status != ord("!") or worktree_status != ord("!"):
+            staged = staged or index_status != ord(" ")
+            unstaged = unstaged or worktree_status != ord(" ")
 
-        if index_status in {"R", "C"} or worktree_status in {"R", "C"}:
+        if index_status in {ord("R"), ord("C")} or worktree_status in {ord("R"), ord("C")}:
             if index >= len(records) or not records[index]:
                 raise ValueError("rename or copy status is missing its source path")
             index += 1
@@ -191,10 +219,6 @@ def _operation_state(git_dir: Path | None) -> list[str]:
         "sequencer": (git_dir / "sequencer",),
     }
     return sorted(name for name, paths in markers.items() if any(path.exists() for path in paths))
-
-
-def _sha256_text(value: str) -> str:
-    return hashlib.sha256(value.encode("utf-8", "surrogatepass")).hexdigest()
 
 
 def observe_checkout(
@@ -265,7 +289,10 @@ def observe_checkout(
     common_dir = _resolve_git_path(path, _text(_git(path, ["rev-parse", "--git-common-dir"])))
     head = _text(_git(path, ["rev-parse", "HEAD"]))
     branch = _text(_git(path, ["symbolic-ref", "--quiet", "--short", "HEAD"]))
-    status_result = _git(path, ["status", "--porcelain=v1", "-z", "--untracked-files=normal"])
+    status_result = _git_bytes(
+        path,
+        ["status", "--porcelain=v1", "-z", "--untracked-files=normal"],
+    )
     observation_complete = True
     if git_dir is None:
         base["errors"].append("git_dir_unavailable")
@@ -288,7 +315,7 @@ def observe_checkout(
             status_entry_count, dirty, staged, unstaged, untracked = _parse_porcelain_v1_z(
                 status_result.stdout
             )
-            status_sha256 = _sha256_text(status_result.stdout)
+            status_sha256 = hashlib.sha256(status_result.stdout).hexdigest()
         except ValueError:
             base["errors"].append("status_unparseable")
             status_entry_count = 0
