@@ -9,6 +9,7 @@ from jsonschema import Draft202012Validator
 
 from .canonical import sha256_json
 from .timeutil import parse_utc
+from .transition_claims import derive_continuity_claims, derive_transition_claims
 
 _SCHEMA_BY_KIND_VERSION = {
     ("reposkop_checkout_observation", 1): "checkout-observation.v1.schema.json",
@@ -18,6 +19,7 @@ _SCHEMA_BY_KIND_VERSION = {
     ("reposkop_lifecycle_evidence", 1): "lifecycle-evidence.v1.schema.json",
     ("reposkop_coherence_projection", 1): "coherence-projection.v1.schema.json",
     ("reposkop_coherence_report", 1): "coherence-report.v1.schema.json",
+    ("reposkop_coherence_report", 2): "coherence-report.v2.schema.json",
     ("reposkop_inventory_config", 1): "inventory-config.v1.schema.json",
     ("reposkop_explicit_inventory", 1): "explicit-inventory.v1.schema.json",
 }
@@ -60,6 +62,21 @@ def _nested_validation_error(
     child = validate_artifact(value)
     if not child["valid"]:
         rendered_errors.append({"path": path, "message": "nested artifact is invalid"})
+
+
+def _claim_mismatch_errors(
+    rendered_errors: list[Any],
+    value: dict[str, Any],
+    expected: dict[str, Any],
+) -> None:
+    for field, expected_value in expected.items():
+        if value.get(field) != expected_value:
+            rendered_errors.append(
+                {
+                    "path": field,
+                    "message": "derived claim does not match embedded source artifacts",
+                }
+            )
 
 
 def validate_artifact(value: dict[str, Any]) -> dict[str, Any]:
@@ -151,6 +168,12 @@ def validate_artifact(value: dict[str, Any]) -> dict[str, Any]:
     if kind == "reposkop_checkout_transition":
         before = value.get("before")
         after = value.get("after")
+        before_validation = (
+            validate_artifact(before) if isinstance(before, dict) else {"valid": False}
+        )
+        after_validation = (
+            validate_artifact(after) if isinstance(after, dict) else {"valid": False}
+        )
         _nested_validation_error(
             rendered_errors,
             path="before",
@@ -183,26 +206,33 @@ def validate_artifact(value: dict[str, Any]) -> dict[str, Any]:
                     "message": "transition is not bound to after observation",
                 }
             )
+        expected_claims = derive_transition_claims(
+            before,
+            after,
+            before_valid=before_validation.get("valid") is True,
+            after_valid=after_validation.get("valid") is True,
+        )
+        _claim_mismatch_errors(rendered_errors, value, expected_claims)
 
     if kind == "reposkop_checkout_continuity":
         transition = value.get("transition")
         if not isinstance(transition, dict):
+            transition_validation = {
+                "valid": False,
+                "kind": None,
+                "schema": None,
+                "errors": ["artifact_not_object"],
+            }
             rendered_errors.append(
                 {"path": "transition", "message": "nested transition is not an object"}
             )
         elif transition.get("kind") != "reposkop_checkout_transition":
+            transition_validation = validate_artifact(transition)
             rendered_errors.append(
                 {"path": "transition", "message": "nested artifact is not a transition"}
             )
         else:
-            actual_transition_validation = validate_artifact(transition)
-            if value.get("transition_validation") != actual_transition_validation:
-                rendered_errors.append(
-                    {
-                        "path": "transition_validation",
-                        "message": "embedded transition validation is inconsistent",
-                    }
-                )
+            transition_validation = validate_artifact(transition)
             if value.get("transition_sha256") != transition.get("transition_sha256"):
                 rendered_errors.append(
                     {
@@ -210,6 +240,18 @@ def validate_artifact(value: dict[str, Any]) -> dict[str, Any]:
                         "message": "continuity is not bound to transition",
                     }
                 )
+        if value.get("transition_validation") != transition_validation:
+            rendered_errors.append(
+                {
+                    "path": "transition_validation",
+                    "message": "embedded transition validation is inconsistent",
+                }
+            )
+        expected_claims = derive_continuity_claims(
+            transition,
+            transition_valid=transition_validation.get("valid") is True,
+        )
+        _claim_mismatch_errors(rendered_errors, value, expected_claims)
 
     return {
         "valid": not rendered_errors,
