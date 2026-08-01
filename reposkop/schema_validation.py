@@ -10,16 +10,21 @@ from jsonschema import Draft202012Validator
 from .canonical import sha256_json
 from .timeutil import parse_utc
 
-_SCHEMA_BY_KIND = {
-    "reposkop_checkout_observation": "checkout-observation.v1.schema.json",
-    "reposkop_lifecycle_evidence": "lifecycle-evidence.v1.schema.json",
-    "reposkop_coherence_projection": "coherence-projection.v1.schema.json",
-    "reposkop_coherence_report": "coherence-report.v1.schema.json",
-    "reposkop_inventory_config": "inventory-config.v1.schema.json",
-    "reposkop_explicit_inventory": "explicit-inventory.v1.schema.json",
+_SCHEMA_BY_KIND_VERSION = {
+    ("reposkop_checkout_observation", 1): "checkout-observation.v1.schema.json",
+    ("reposkop_checkout_observation", 2): "checkout-observation.v2.schema.json",
+    ("reposkop_checkout_transition", 1): "checkout-transition.v1.schema.json",
+    ("reposkop_checkout_continuity", 1): "checkout-continuity.v1.schema.json",
+    ("reposkop_lifecycle_evidence", 1): "lifecycle-evidence.v1.schema.json",
+    ("reposkop_coherence_projection", 1): "coherence-projection.v1.schema.json",
+    ("reposkop_coherence_report", 1): "coherence-report.v1.schema.json",
+    ("reposkop_inventory_config", 1): "inventory-config.v1.schema.json",
+    ("reposkop_explicit_inventory", 1): "explicit-inventory.v1.schema.json",
 }
 _DIGEST_BY_KIND = {
     "reposkop_checkout_observation": "observation_sha256",
+    "reposkop_checkout_transition": "transition_sha256",
+    "reposkop_checkout_continuity": "continuity_sha256",
     "reposkop_coherence_projection": "projection_sha256",
     "reposkop_coherence_report": "report_sha256",
     "reposkop_explicit_inventory": "inventory_sha256",
@@ -34,11 +39,42 @@ def _schema(filename: str) -> dict[str, Any]:
     return value
 
 
+def _version(value: dict[str, Any]) -> int | None:
+    version = value.get("schema_version")
+    return version if type(version) is int else None
+
+
+def _nested_validation_error(
+    rendered_errors: list[Any],
+    *,
+    path: str,
+    value: Any,
+    expected_kind: str,
+) -> None:
+    if not isinstance(value, dict):
+        rendered_errors.append({"path": path, "message": "nested artifact is not an object"})
+        return
+    if value.get("kind") != expected_kind:
+        rendered_errors.append({"path": path, "message": f"nested artifact is not {expected_kind}"})
+        return
+    child = validate_artifact(value)
+    if not child["valid"]:
+        rendered_errors.append({"path": path, "message": "nested artifact is invalid"})
+
+
 def validate_artifact(value: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {"valid": False, "kind": None, "schema": None, "errors": ["artifact_not_object"]}
     kind = value.get("kind")
-    filename = _SCHEMA_BY_KIND.get(kind)
+    version = _version(value)
+    filename = _SCHEMA_BY_KIND_VERSION.get((kind, version))
     if filename is None:
-        return {"valid": False, "kind": kind, "errors": ["unsupported_kind"]}
+        return {
+            "valid": False,
+            "kind": kind,
+            "schema": None,
+            "errors": ["unsupported_kind_or_schema_version"],
+        }
     errors = sorted(
         Draft202012Validator(_schema(filename)).iter_errors(value),
         key=lambda item: list(item.absolute_path),
@@ -62,6 +98,8 @@ def validate_artifact(value: dict[str, Any]) -> dict[str, Any]:
 
     timestamp_fields = {
         "reposkop_checkout_observation": ("observed_at",),
+        "reposkop_checkout_transition": ("generated_at",),
+        "reposkop_checkout_continuity": ("generated_at",),
         "reposkop_coherence_report": ("generated_at",),
         "reposkop_explicit_inventory": ("generated_at",),
     }.get(kind, ())
@@ -74,23 +112,33 @@ def validate_artifact(value: dict[str, Any]) -> dict[str, Any]:
     if kind == "reposkop_coherence_report":
         observation = value.get("observation")
         projection = value.get("projection")
-        if isinstance(observation, dict):
-            child = validate_artifact(observation)
-            if not child["valid"]:
-                rendered_errors.append({"path": "observation", "message": "nested observation is invalid"})
-        if isinstance(projection, dict):
-            child = validate_artifact(projection)
-            if not child["valid"]:
-                rendered_errors.append({"path": "projection", "message": "nested projection is invalid"})
+        _nested_validation_error(
+            rendered_errors,
+            path="observation",
+            value=observation,
+            expected_kind="reposkop_checkout_observation",
+        )
+        _nested_validation_error(
+            rendered_errors,
+            path="projection",
+            value=projection,
+            expected_kind="reposkop_coherence_projection",
+        )
         if isinstance(observation, dict) and isinstance(projection, dict):
             if projection.get("observation_sha256") != observation.get("observation_sha256"):
                 rendered_errors.append(
-                    {"path": "projection/observation_sha256", "message": "projection is not bound to report observation"}
+                    {
+                        "path": "projection/observation_sha256",
+                        "message": "projection is not bound to report observation",
+                    }
                 )
             actual_observation_validation = validate_artifact(observation)
             if projection.get("observation_validation") != actual_observation_validation:
                 rendered_errors.append(
-                    {"path": "projection/observation_validation", "message": "embedded observation validation is inconsistent"}
+                    {
+                        "path": "projection/observation_validation",
+                        "message": "embedded observation validation is inconsistent",
+                    }
                 )
 
     if kind == "reposkop_explicit_inventory":
@@ -99,6 +147,56 @@ def validate_artifact(value: dict[str, Any]) -> dict[str, Any]:
                 rendered_errors.append(
                     {"path": f"observations/{index}", "message": "nested observation is invalid"}
                 )
+
+    if kind == "reposkop_checkout_transition":
+        before = value.get("before")
+        after = value.get("after")
+        _nested_validation_error(
+            rendered_errors,
+            path="before",
+            value=before,
+            expected_kind="reposkop_checkout_observation",
+        )
+        _nested_validation_error(
+            rendered_errors,
+            path="after",
+            value=after,
+            expected_kind="reposkop_checkout_observation",
+        )
+        if isinstance(before, dict):
+            if value.get("before_observation_sha256") != before.get("observation_sha256"):
+                rendered_errors.append(
+                    {
+                        "path": "before_observation_sha256",
+                        "message": "transition is not bound to before observation",
+                    }
+                )
+        if isinstance(after, dict):
+            if value.get("after_observation_sha256") != after.get("observation_sha256"):
+                rendered_errors.append(
+                    {
+                        "path": "after_observation_sha256",
+                        "message": "transition is not bound to after observation",
+                    }
+                )
+
+    if kind == "reposkop_checkout_continuity":
+        transition = value.get("transition")
+        _nested_validation_error(
+            rendered_errors,
+            path="transition",
+            value=transition,
+            expected_kind="reposkop_checkout_transition",
+        )
+        if isinstance(transition, dict):
+            if value.get("transition_sha256") != transition.get("transition_sha256"):
+                rendered_errors.append(
+                    {
+                        "path": "transition_sha256",
+                        "message": "continuity is not bound to transition",
+                    }
+                )
+
     return {
         "valid": not rendered_errors,
         "kind": kind,
