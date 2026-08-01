@@ -1,50 +1,102 @@
 # Reposkop
 
-Reposkop is the deterministic, target-bound, read-only repository and checkout coherence adapter for the Heimgewebe operator ecosystem.
+Reposkop is the canonical producer of local checkout identity, transition and continuity truth for the Heimgewebe operator ecosystem.
 
-Canonical repository: `https://github.com/heimgewebe/reposkop` (GitHub repository ID `1232573747`). The former `heimgewebe/steuerboard` path is redirect compatibility only and is not a canonical system identity.
+It answers three operational questions:
 
-It observes one explicitly selected repository or checkout, validates supplied lifecycle evidence, and derives a non-authoritative coherence projection. It never fetches, pulls, switches branches, changes worktrees, dispatches tasks, approves actions, or mutates host state.
+1. **Identity** — which exact repository checkout is this?
+2. **Transition** — what changed between a bound observation and the current state?
+3. **Continuity** — is resumed work still attached to the same checkout identity?
 
-> Observation ≠ evidence binding ≠ projection ≠ decision ≠ effect
+Reposkop derives these facts from one explicitly selected local target. Its artifacts are deterministic, schema-versioned and digest-bound.
 
-## Authority boundary
+## Authority scope
+
+Reposkop is authoritative for:
+
+- the canonical representation of a local checkout identity;
+- the canonical comparison of two bound checkout observations;
+- the continuity classification derived from that comparison;
+- machine-readable reason and anomaly codes for identity and state changes.
+
+Other systems retain their own authority:
 
 | Concern | Authority |
 | --- | --- |
-| Local repository and checkout observation | Reposkop |
-| Read-only coherence projection from supplied evidence | Reposkop |
+| Local checkout identity, transition and continuity | Reposkop |
 | Task, claim, queue and completion truth | Bureau |
-| Git, worktree, process, service and host effects | Grabowski |
-| Branch, pull-request, review and check truth | GitHub / CI |
-| Repository context bundles | RepoGround |
-| System identity and stable relations | Systemkatalog |
-| Display and orientation | Leitstand |
+| Effects, leases, processes, worktrees and host mutation | Grabowski |
+| Pull requests, reviews and checks | GitHub / CI |
+| Commit-bound code context | RepoGround |
+| System identity and stable ecosystem relations | Systemkatalog |
+| Display and operator orientation | Leitstand |
 
-A Reposkop state such as `remove_candidate` is an explanation, not deletion permission. Grabowski must obtain fresh authority and reproduce every live precondition before any effect. Reposkop reports therefore keep `effect_authorized` fixed to `false`.
+Reposkop does not authorize effects. `effect_authorized` remains fixed to `false` because observing a state transition is different from permitting one.
+
+## Artifacts
+
+### Checkout observation v2
+
+A checkout observation binds:
+
+- resolved target, Git directory and common-directory paths;
+- filesystem device and inode identities;
+- normalized remote repository identity;
+- checkout role and purpose;
+- repository and checkout identity digests;
+- HEAD, branch, upstream and dirty-state digest;
+- active Git operation markers such as rebase, merge or cherry-pick.
+
+### Checkout transition v1
+
+A transition embeds validated before and after observations, compares identity and state fields, and emits stable reason codes such as:
+
+- `identity.checkout_break`
+- `identity.remote_changed`
+- `continuity.head_changed`
+- `continuity.status_changed`
+- `continuity.operation_state_changed`
+
+### Checkout continuity v1
+
+Continuity classifies a transition as:
+
+- `intact`
+- `explainable_drift`
+- `identity_break`
+- `inconclusive`
 
 ## Commands
 
 ```text
-reposkop inspect <path> [--role <role>] [--purpose <text>] --json
-reposkop report <path> [--role <role>] [--purpose <text>] [--lifecycle-evidence <file>] --json
+reposkop inspect <path> [--role <role>] [--purpose <purpose>] --json
+reposkop transition <path> --before <observation.json> [--role <role>] [--purpose <purpose>] --json
+reposkop continuity <path> --expected <observation.json> [--role <role>] [--purpose <purpose>] --json
+reposkop report <path> [--role <role>] [--purpose <purpose>] [--lifecycle-evidence <file>] --json
 reposkop project <observation.json> [--lifecycle-evidence <file>] --json
 reposkop inventory --config <explicit-targets.json> --json
 reposkop validate <artifact.json> --json
 ```
 
-There is no implicit filesystem discovery and no global scan by default. `inventory` reads only the targets explicitly listed in its configuration.
+There is no implicit filesystem discovery. Inventory observes only explicitly configured targets.
 
-## Compatibility
+## Required operator integration
 
-The transitional `steuerboard` executable remains as a narrow, read-only adapter for:
+Risk-bearing repository operations should bind a Reposkop observation before the effect and a transition after it:
 
 ```text
-steuerboard observe repo <path> --json
-steuerboard operator report --repo <path> [--lifecycle-evidence <file>] --json
+Reposkop observation
+        ↓
+Grabowski effect
+        ↓
+Reposkop transition / continuity
+        ↓
+Grabowski receipt binds all artifact digests
 ```
 
-All former mutation, approval, planning, runbook, network-refresh, service-gate and global-report surfaces fail closed with a migration message. The compatibility adapter is retained only for the bounded migration window documented in [Migration](docs/migration.md); it does not preserve the old repository identity or authority model.
+This applies especially to interrupted-work resumption, branch or rebase operations, pushes, merges, deployment source selection, and worktree archival or removal.
+
+Read-only repository inspection does not require this lifecycle.
 
 ## Validation
 
@@ -52,10 +104,4 @@ All former mutation, approval, planning, runbook, network-refresh, service-gate 
 make deploy-check
 ```
 
-See:
-
-- [Architecture audit](docs/audit-2026-07-24.md)
-- [Architecture](docs/architecture.md)
-- [Integration contract](docs/integration.md)
-- [Automation decision](docs/automation.md)
-- [Migration status](docs/migration.md)
+See [Checkout identity and transition plan](docs/checkout-identity-transition-plan.md) and [Architecture](docs/architecture.md).
