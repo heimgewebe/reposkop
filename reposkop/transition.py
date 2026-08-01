@@ -7,7 +7,7 @@ from .canonical import sha256_json
 from .observation import observe_checkout
 from .schema_validation import validate_artifact
 from .timeutil import utc_now
-from .transition_claims import derive_transition_claims
+from .transition_claims import derive_continuity_claims, derive_transition_claims
 
 
 def build_transition(
@@ -66,27 +66,10 @@ def observe_transition(
 
 def build_continuity(transition: dict[str, Any]) -> dict[str, Any]:
     validation = validate_artifact(transition)
-    if not validation.get("valid"):
-        state = "inconclusive"
-        reason_codes = ["evidence.transition_invalid"]
-    else:
-        identity_continuity = transition.get("identity_continuity")
-        state_changed = any(
-            value.get("changed") is True
-            for value in transition.get("state_changes", {}).values()
-            if isinstance(value, dict)
-        )
-        if identity_continuity == "inconclusive":
-            state = "inconclusive"
-        elif identity_continuity != "same_checkout":
-            state = "identity_break"
-        elif state_changed:
-            state = "explainable_drift"
-        else:
-            state = "intact"
-        reason_codes = list(transition.get("reason_codes", []))
-        reason_codes.extend(transition.get("anomaly_codes", []))
-
+    claims = derive_continuity_claims(
+        transition,
+        transition_valid=validation.get("valid") is True,
+    )
     artifact: dict[str, Any] = {
         "schema_version": 1,
         "kind": "reposkop_checkout_continuity",
@@ -96,13 +79,12 @@ def build_continuity(transition: dict[str, Any]) -> dict[str, Any]:
             "domain": "local_checkout_continuity",
             "claim": "canonical",
         },
-        "state": state,
+        **claims,
         "transition": transition,
         "transition_sha256": transition.get("transition_sha256")
         if isinstance(transition, dict)
         else None,
         "transition_validation": validation,
-        "reason_codes": sorted(set(reason_codes)),
         "effect_authorized": False,
         "does_not_establish": [
             "task_or_lease_truth",
