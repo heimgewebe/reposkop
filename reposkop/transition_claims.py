@@ -122,3 +122,37 @@ def derive_transition_claims(
         "reason_codes": sorted(set(reason_codes)),
         "anomaly_codes": sorted(set(anomaly_codes)),
     }
+
+
+def derive_continuity_claims(
+    transition: Any,
+    *,
+    transition_valid: bool,
+) -> dict[str, Any]:
+    if not transition_valid or not isinstance(transition, dict):
+        return {
+            "state": "inconclusive",
+            "reason_codes": ["evidence.transition_invalid"],
+        }
+
+    identity_continuity = transition.get("identity_continuity")
+    state_changed = any(
+        value.get("changed") is True
+        for value in transition.get("state_changes", {}).values()
+        if isinstance(value, dict)
+    )
+    if identity_continuity == "inconclusive":
+        state = "inconclusive"
+    elif identity_continuity != "same_checkout":
+        state = "identity_break"
+    elif state_changed:
+        state = "explainable_drift"
+    else:
+        state = "intact"
+
+    reason_codes = list(transition.get("reason_codes", []))
+    reason_codes.extend(transition.get("anomaly_codes", []))
+    return {
+        "state": state,
+        "reason_codes": sorted(set(reason_codes)),
+    }
