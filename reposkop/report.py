@@ -24,7 +24,8 @@ def build_report(
         "observation": observation,
         "projection": project_coherence(observation, lifecycle_evidence),
         "authority_boundary": {
-            "observer": "reposkop",
+            "checkout_identity_truth": "reposkop",
+            "checkout_transition_truth": "reposkop",
             "effect_executor": "grabowski",
             "task_truth": "bureau",
             "pull_request_truth": "github",
