@@ -186,22 +186,30 @@ def validate_artifact(value: dict[str, Any]) -> dict[str, Any]:
 
     if kind == "reposkop_checkout_continuity":
         transition = value.get("transition")
-        _nested_validation_error(
-            rendered_errors,
-            path="transition",
-            value=transition,
-            expected_kind="reposkop_checkout_transition",
-        )
-        if (
-            isinstance(transition, dict)
-            and value.get("transition_sha256") != transition.get("transition_sha256")
-        ):
+        if not isinstance(transition, dict):
             rendered_errors.append(
-                {
-                    "path": "transition_sha256",
-                    "message": "continuity is not bound to transition",
-                }
+                {"path": "transition", "message": "nested transition is not an object"}
             )
+        elif transition.get("kind") != "reposkop_checkout_transition":
+            rendered_errors.append(
+                {"path": "transition", "message": "nested artifact is not a transition"}
+            )
+        else:
+            actual_transition_validation = validate_artifact(transition)
+            if value.get("transition_validation") != actual_transition_validation:
+                rendered_errors.append(
+                    {
+                        "path": "transition_validation",
+                        "message": "embedded transition validation is inconsistent",
+                    }
+                )
+            if value.get("transition_sha256") != transition.get("transition_sha256"):
+                rendered_errors.append(
+                    {
+                        "path": "transition_sha256",
+                        "message": "continuity is not bound to transition",
+                    }
+                )
 
     return {
         "valid": not rendered_errors,
