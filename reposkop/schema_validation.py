@@ -163,22 +163,26 @@ def validate_artifact(value: dict[str, Any]) -> dict[str, Any]:
             value=after,
             expected_kind="reposkop_checkout_observation",
         )
-        if isinstance(before, dict):
-            if value.get("before_observation_sha256") != before.get("observation_sha256"):
-                rendered_errors.append(
-                    {
-                        "path": "before_observation_sha256",
-                        "message": "transition is not bound to before observation",
-                    }
-                )
-        if isinstance(after, dict):
-            if value.get("after_observation_sha256") != after.get("observation_sha256"):
-                rendered_errors.append(
-                    {
-                        "path": "after_observation_sha256",
-                        "message": "transition is not bound to after observation",
-                    }
-                )
+        if (
+            isinstance(before, dict)
+            and value.get("before_observation_sha256") != before.get("observation_sha256")
+        ):
+            rendered_errors.append(
+                {
+                    "path": "before_observation_sha256",
+                    "message": "transition is not bound to before observation",
+                }
+            )
+        if (
+            isinstance(after, dict)
+            and value.get("after_observation_sha256") != after.get("observation_sha256")
+        ):
+            rendered_errors.append(
+                {
+                    "path": "after_observation_sha256",
+                    "message": "transition is not bound to after observation",
+                }
+            )
 
     if kind == "reposkop_checkout_continuity":
         transition = value.get("transition")
@@ -188,14 +192,16 @@ def validate_artifact(value: dict[str, Any]) -> dict[str, Any]:
             value=transition,
             expected_kind="reposkop_checkout_transition",
         )
-        if isinstance(transition, dict):
-            if value.get("transition_sha256") != transition.get("transition_sha256"):
-                rendered_errors.append(
-                    {
-                        "path": "transition_sha256",
-                        "message": "continuity is not bound to transition",
-                    }
-                )
+        if (
+            isinstance(transition, dict)
+            and value.get("transition_sha256") != transition.get("transition_sha256")
+        ):
+            rendered_errors.append(
+                {
+                    "path": "transition_sha256",
+                    "message": "continuity is not bound to transition",
+                }
+            )
 
     return {
         "valid": not rendered_errors,
