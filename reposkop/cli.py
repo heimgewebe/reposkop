@@ -12,6 +12,7 @@ from .observation import observe_checkout
 from .projection import project_coherence
 from .report import build_report
 from .schema_validation import validate_artifact
+from .transition import observe_continuity, observe_transition
 
 
 def _emit(value: Any) -> None:
@@ -28,6 +29,26 @@ def build_parser() -> argparse.ArgumentParser:
     inspect.add_argument("--role", choices=ROLE_VALUES)
     inspect.add_argument("--purpose")
     inspect.add_argument("--json", action="store_true", required=True)
+
+    transition = sub.add_parser(
+        "transition",
+        help="compare one bound observation with the current state of the same target",
+    )
+    transition.add_argument("path")
+    transition.add_argument("--before", required=True)
+    transition.add_argument("--role", choices=ROLE_VALUES)
+    transition.add_argument("--purpose")
+    transition.add_argument("--json", action="store_true", required=True)
+
+    continuity = sub.add_parser(
+        "continuity",
+        help="classify whether a current checkout continues one bound observation",
+    )
+    continuity.add_argument("path")
+    continuity.add_argument("--expected", required=True)
+    continuity.add_argument("--role", choices=ROLE_VALUES)
+    continuity.add_argument("--purpose")
+    continuity.add_argument("--json", action="store_true", required=True)
 
     report = sub.add_parser("report", help="build one source-bound coherence report")
     report.add_argument("path")
@@ -56,6 +77,24 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "inspect":
             _emit(observe_checkout(args.path, explicit_role=args.role, purpose=args.purpose))
+        elif args.command == "transition":
+            _emit(
+                observe_transition(
+                    load_json(args.before),
+                    args.path,
+                    explicit_role=args.role,
+                    purpose=args.purpose,
+                )
+            )
+        elif args.command == "continuity":
+            _emit(
+                observe_continuity(
+                    load_json(args.expected),
+                    args.path,
+                    explicit_role=args.role,
+                    purpose=args.purpose,
+                )
+            )
         elif args.command == "report":
             evidence = load_json(args.lifecycle_evidence) if args.lifecycle_evidence else None
             _emit(

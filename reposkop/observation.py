@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import hashlib
 import os
 import subprocess
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 from .canonical import sha256_json
 from .roles import classify_role
@@ -76,10 +78,14 @@ def _git_environment() -> dict[str, str]:
     return env
 
 
-def _git(path: Path, arguments: list[str], *, timeout: int = 10) -> subprocess.CompletedProcess[str]:
+def _git_argv(path: Path, arguments: list[str]) -> list[str]:
     if tuple(arguments) not in _ALLOWED_GIT_PROBES:
         raise ValueError(f"unsupported Git observation probe: {arguments!r}")
-    argv = [*_GIT_PREFIX, "-C", str(path), *arguments]
+    return [*_GIT_PREFIX, "-C", str(path), *arguments]
+
+
+def _git(path: Path, arguments: list[str], *, timeout: int = 10) -> subprocess.CompletedProcess[str]:
+    argv = _git_argv(path, arguments)
     try:
         return subprocess.run(
             argv,
@@ -93,6 +99,30 @@ def _git(path: Path, arguments: list[str], *, timeout: int = 10) -> subprocess.C
         )
     except subprocess.TimeoutExpired:
         return subprocess.CompletedProcess(argv, 124, "", "git observation probe timed out")
+
+
+def _git_bytes(
+    path: Path,
+    arguments: list[str],
+    *,
+    timeout: int = 10,
+) -> subprocess.CompletedProcess[bytes]:
+    argv = _git_argv(path, arguments)
+    try:
+        return subprocess.run(
+            argv,
+            check=False,
+            capture_output=True,
+            timeout=timeout,
+            env=_git_environment(),
+        )
+    except subprocess.TimeoutExpired:
+        return subprocess.CompletedProcess(
+            argv,
+            124,
+            b"",
+            b"git observation probe timed out",
+        )
 
 
 def _text(result: subprocess.CompletedProcess[str]) -> str | None:
@@ -112,19 +142,27 @@ def _resolve_git_path(base: Path, value: str | None) -> Path | None:
 
 
 def _remote_identity(url: str | None) -> str | None:
-    if not url:
+    if not url or not url.strip():
         return None
-    value = url.removesuffix(".git")
-    if value.startswith("git@") and ":" in value:
-        value = value.split(":", 1)[1]
-    elif "://" in value:
-        value = value.split("://", 1)[1]
-        value = value.split("/", 1)[1] if "/" in value else value
-    return value.strip("/") or None
+    value = url.strip()
+    if "://" in value:
+        parsed = urlsplit(value)
+        path = parsed.path.removesuffix(".git").strip("/")
+        if parsed.hostname:
+            host = parsed.hostname.lower()
+            return f"{host}/{path}" if path else host
+        if parsed.scheme == "file":
+            return f"file:{parsed.path.removesuffix('.git')}"
+    prefix, separator, path = value.partition(":")
+    if separator and "@" in prefix and "/" not in prefix:
+        host = prefix.rsplit("@", 1)[1].lower()
+        normalized_path = path.removesuffix(".git").strip("/")
+        return f"{host}/{normalized_path}" if normalized_path else host
+    return f"local:{value.removesuffix('.git').rstrip('/')}"
 
 
-def _parse_porcelain_v1_z(payload: str) -> tuple[int, bool, bool, bool, bool]:
-    records = payload.split("\0")
+def _parse_porcelain_v1_z(payload: bytes) -> tuple[int, bool, bool, bool, bool]:
+    records = payload.split(b"\0")
     index = 0
     count = 0
     staged = False
@@ -136,23 +174,51 @@ def _parse_porcelain_v1_z(payload: str) -> tuple[int, bool, bool, bool, bool]:
         index += 1
         if not entry:
             continue
-        if len(entry) < 3 or entry[2] != " ":
+        if len(entry) < 3 or entry[2] != ord(" "):
             raise ValueError("malformed porcelain status entry")
 
         index_status, worktree_status = entry[0], entry[1]
         count += 1
-        if index_status == "?" and worktree_status == "?":
+        if index_status == ord("?") and worktree_status == ord("?"):
             untracked = True
-        elif index_status != "!" or worktree_status != "!":
-            staged = staged or index_status != " "
-            unstaged = unstaged or worktree_status != " "
+        elif index_status != ord("!") or worktree_status != ord("!"):
+            staged = staged or index_status != ord(" ")
+            unstaged = unstaged or worktree_status != ord(" ")
 
-        if index_status in {"R", "C"} or worktree_status in {"R", "C"}:
+        if index_status in {ord("R"), ord("C")} or worktree_status in {ord("R"), ord("C")}:
             if index >= len(records) or not records[index]:
                 raise ValueError("rename or copy status is missing its source path")
             index += 1
 
     return count, count > 0, staged, unstaged, untracked
+
+
+def _stat_identity(path: Path | None) -> dict[str, Any] | None:
+    if path is None:
+        return None
+    try:
+        metadata = path.stat()
+    except OSError:
+        return None
+    return {
+        "path": str(path),
+        "device": metadata.st_dev,
+        "inode": metadata.st_ino,
+    }
+
+
+def _operation_state(git_dir: Path | None) -> list[str]:
+    if git_dir is None:
+        return []
+    markers = {
+        "rebase": (git_dir / "rebase-merge", git_dir / "rebase-apply"),
+        "merge": (git_dir / "MERGE_HEAD",),
+        "cherry_pick": (git_dir / "CHERRY_PICK_HEAD",),
+        "revert": (git_dir / "REVERT_HEAD",),
+        "bisect": (git_dir / "BISECT_LOG",),
+        "sequencer": (git_dir / "sequencer",),
+    }
+    return sorted(name for name, paths in markers.items() if any(path.exists() for path in paths))
 
 
 def observe_checkout(
@@ -164,9 +230,14 @@ def observe_checkout(
     path = Path(raw_path).expanduser().resolve(strict=False)
     observed_at = utc_now()
     base: dict[str, Any] = {
-        "schema_version": 1,
+        "schema_version": 2,
         "kind": "reposkop_checkout_observation",
         "observed_at": observed_at,
+        "authority": {
+            "producer": "reposkop",
+            "domain": "local_checkout_identity",
+            "claim": "canonical",
+        },
         "target": {"path": str(path), "purpose": purpose},
         "exists": path.exists(),
         "is_git_checkout": False,
@@ -176,7 +247,7 @@ def observe_checkout(
             "remote_freshness",
             "task_or_lease_truth",
             "pull_request_truth",
-            "cleanup_or_mutation_authority",
+            "effect_authorization",
         ],
     }
     if not path.exists():
@@ -218,7 +289,10 @@ def observe_checkout(
     common_dir = _resolve_git_path(path, _text(_git(path, ["rev-parse", "--git-common-dir"])))
     head = _text(_git(path, ["rev-parse", "HEAD"]))
     branch = _text(_git(path, ["symbolic-ref", "--quiet", "--short", "HEAD"]))
-    status_result = _git(path, ["status", "--porcelain=v1", "-z", "--untracked-files=normal"])
+    status_result = _git_bytes(
+        path,
+        ["status", "--porcelain=v1", "-z", "--untracked-files=normal"],
+    )
     observation_complete = True
     if git_dir is None:
         base["errors"].append("git_dir_unavailable")
@@ -234,18 +308,22 @@ def observe_checkout(
         status_entry_count = 0
         dirty: bool | None = None
         staged = unstaged = untracked = None
+        status_sha256 = None
         observation_complete = False
     else:
         try:
             status_entry_count, dirty, staged, unstaged, untracked = _parse_porcelain_v1_z(
                 status_result.stdout
             )
+            status_sha256 = hashlib.sha256(status_result.stdout).hexdigest()
         except ValueError:
             base["errors"].append("status_unparseable")
             status_entry_count = 0
             dirty = staged = unstaged = untracked = None
+            status_sha256 = None
             observation_complete = False
     origin_url = _text(_git(path, ["config", "--get", "remote.origin.url"]))
+    remote = _remote_identity(origin_url)
     upstream = _text(
         _git(path, ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"])
     )
@@ -266,6 +344,31 @@ def observe_checkout(
         git_common_dir=common_dir,
         explicit_role=explicit_role,
     )
+    target_identity = _stat_identity(toplevel)
+    git_dir_identity = _stat_identity(git_dir)
+    common_dir_identity = _stat_identity(common_dir)
+    for label, identity in (
+        ("target_identity_unavailable", target_identity),
+        ("git_dir_identity_unavailable", git_dir_identity),
+        ("git_common_dir_identity_unavailable", common_dir_identity),
+    ):
+        if identity is None:
+            base["errors"].append(label)
+            observation_complete = False
+    checkout_identity_material = {
+        "target": target_identity,
+        "git_dir": git_dir_identity,
+        "git_common_dir": common_dir_identity,
+        "remote": remote,
+        "role": role,
+        "purpose": purpose,
+    }
+    repository_identity_material: dict[str, Any]
+    if remote:
+        repository_identity_material = {"remote": remote}
+    else:
+        repository_identity_material = {"git_common_dir": common_dir_identity}
+
     base.update(
         {
             "is_git_checkout": True,
@@ -275,8 +378,13 @@ def observe_checkout(
                 "path": str(toplevel),
                 "git_dir": str(git_dir) if git_dir else None,
                 "git_common_dir": str(common_dir) if common_dir else None,
-                "remote": _remote_identity(origin_url),
+                "remote": remote,
                 "purpose": purpose,
+                "target_stat": target_identity,
+                "git_dir_stat": git_dir_identity,
+                "git_common_dir_stat": common_dir_identity,
+                "repository_identity_sha256": sha256_json(repository_identity_material),
+                "checkout_identity_sha256": sha256_json(checkout_identity_material),
             },
             "role": {"value": role, "reasons": role_reasons},
             "git": {
@@ -288,6 +396,12 @@ def observe_checkout(
                 "unstaged": unstaged,
                 "untracked": untracked,
                 "status_entry_count": status_entry_count,
+                "status_sha256": status_sha256,
+                "operation_state": _operation_state(git_dir),
+                "alternates_configured": bool(
+                    common_dir and (common_dir / "objects" / "info" / "alternates").exists()
+                ),
+                "gitmodules_present": (toplevel / ".gitmodules").is_file(),
                 "upstream": upstream,
                 "ahead": ahead,
                 "behind": behind,

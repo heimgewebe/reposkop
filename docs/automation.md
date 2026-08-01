@@ -1,29 +1,38 @@
 # Automation decision
 
-## Accepted automations
+## Required event-bound automation
 
-### Event-bound target report
+### Risk-bearing repository transition
 
-A typed Grabowski grip may request one Reposkop report for the exact repository or checkout it is about to inspect. The report is bounded by target, time and output size and cannot block unrelated work globally.
+Grabowski should capture a Reposkop observation before a branch, rebase, push, merge, deployment-source or worktree-lifecycle effect. After the effect it should derive transition and continuity artifacts and bind their digests to the effect receipt.
 
-### Lifecycle projection refresh
+### Interrupted-work resume
 
-After Grabowski creates, archives or removes a worktree, it may emit fresh lifecycle evidence and request a new Reposkop projection for that same target. The post-effect report is a readback aid, not the effect receipt itself.
+Before resuming durable or abandoned work, the consumer should compare the last bound observation with the current target. `identity_break` requires recovery or rerouting; `inconclusive` requires fresh authority reads rather than silent adoption.
 
-### Leitstand advisory publication
+### Lifecycle readback
 
-A source-bound report may be published to Leitstand after a meaningful state transition. Publication should be delta-based and deduplicated by report digest.
+After Grabowski creates, archives or removes a worktree, Reposkop should derive the target-bound post-state and transition. Reposkop records the local identity result; Grabowski remains responsible for the effect and its authorization.
 
-## Rejected automations
+### Leitstand anomaly publication
+
+Identity breaks, incomplete observations and unresolved transitions may be published to Leitstand. Publication should be delta-based and deduplicated by artifact digest.
+
+## Optional automation
+
+A bounded explicit inventory may be used for a named target set when an operator needs portfolio-level orientation. It must not become an implicit home or fleet scan.
+
+## Rejected automation
 
 - permanent Reposkop daemon;
 - implicit full-home or full-fleet discovery;
-- mandatory global preflight for every operator action;
-- scheduled unconditional full scan;
-- cleanup scheduler or repair executor;
-- independent notifications based only on branch-count thresholds;
-- task creation without Bureau candidate assessment.
+- unconditional scheduled full scans;
+- global stop semantics;
+- cleanup or repair execution;
+- task creation without Bureau assessment;
+- effect approval derived from Reposkop state;
+- notifications when the relevant artifact digest has not changed.
 
-## Conditional future option
+## Availability rule
 
-A low-frequency, delta-only explicit inventory can be considered after real usage proves that event-bound reports miss material drift. It must have a fixed target list, runtime and output budgets, no effects, no global stop semantics, and no notification when the digest is unchanged.
+A Reposkop failure blocks only the risk-bearing operation that requires checkout identity continuity. It must not pause unrelated repositories, read-only investigation or the global operator queue.

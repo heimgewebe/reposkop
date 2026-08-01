@@ -1,3 +1,3 @@
-"""Reposkop: target-bound, read-only repository coherence projection."""
+"""Reposkop: canonical local checkout identity, transition and continuity truth."""
 
-__version__ = "1.0.0"
+__version__ = "2.0.0"

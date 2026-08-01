@@ -1,0 +1,187 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "checkout-observation.v2.schema.json",
+  "type": "object",
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "nullableSha256": {
+      "type": ["string", "null"],
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "statIdentity": {
+      "type": ["object", "null"],
+      "required": ["path", "device", "inode"],
+      "properties": {
+        "path": {"type": "string", "pattern": "^/"},
+        "device": {"type": "integer", "minimum": 0},
+        "inode": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
+    },
+    "role": {
+      "type": "object",
+      "required": ["value", "reasons"],
+      "properties": {
+        "value": {
+          "enum": [
+            "canonical_checkout",
+            "linked_worktree",
+            "auxiliary_clone",
+            "managed_repoground_source",
+            "legacy_repobrief_source",
+            "deployment_source",
+            "grabowski_workspace",
+            "grabowski_lifecycle_worktree",
+            "unknown"
+          ]
+        },
+        "reasons": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "schema_version",
+    "kind",
+    "observed_at",
+    "authority",
+    "target",
+    "exists",
+    "is_git_checkout",
+    "role",
+    "observation_complete",
+    "errors",
+    "does_not_establish",
+    "observation_sha256"
+  ],
+  "properties": {
+    "schema_version": {"const": 2},
+    "kind": {"const": "reposkop_checkout_observation"},
+    "observed_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "authority": {
+      "type": "object",
+      "required": ["producer", "domain", "claim"],
+      "properties": {
+        "producer": {"const": "reposkop"},
+        "domain": {"const": "local_checkout_identity"},
+        "claim": {"const": "canonical"}
+      },
+      "additionalProperties": false
+    },
+    "target": {
+      "type": "object",
+      "required": ["path", "purpose"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1, "pattern": "^/"},
+        "purpose": {"type": ["string", "null"]}
+      },
+      "additionalProperties": false
+    },
+    "exists": {"type": "boolean"},
+    "is_git_checkout": {"type": "boolean"},
+    "identities": {
+      "type": "object",
+      "required": [
+        "path",
+        "git_dir",
+        "git_common_dir",
+        "remote",
+        "purpose",
+        "target_stat",
+        "git_dir_stat",
+        "git_common_dir_stat",
+        "repository_identity_sha256",
+        "checkout_identity_sha256"
+      ],
+      "properties": {
+        "path": {"type": "string", "pattern": "^/"},
+        "git_dir": {"type": ["string", "null"]},
+        "git_common_dir": {"type": ["string", "null"]},
+        "remote": {"type": ["string", "null"]},
+        "purpose": {"type": ["string", "null"]},
+        "target_stat": {"$ref": "#/$defs/statIdentity"},
+        "git_dir_stat": {"$ref": "#/$defs/statIdentity"},
+        "git_common_dir_stat": {"$ref": "#/$defs/statIdentity"},
+        "repository_identity_sha256": {"$ref": "#/$defs/sha256"},
+        "checkout_identity_sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "additionalProperties": false
+    },
+    "role": {"$ref": "#/$defs/role"},
+    "git": {
+      "type": "object",
+      "required": [
+        "head",
+        "branch",
+        "detached",
+        "dirty",
+        "staged",
+        "unstaged",
+        "untracked",
+        "status_entry_count",
+        "status_sha256",
+        "operation_state",
+        "alternates_configured",
+        "gitmodules_present",
+        "upstream",
+        "ahead",
+        "behind",
+        "upstream_freshness"
+      ],
+      "properties": {
+        "head": {"type": ["string", "null"], "pattern": "^[0-9a-f]{40,64}$"},
+        "branch": {"type": ["string", "null"]},
+        "detached": {"type": "boolean"},
+        "dirty": {"type": ["boolean", "null"]},
+        "staged": {"type": ["boolean", "null"]},
+        "unstaged": {"type": ["boolean", "null"]},
+        "untracked": {"type": ["boolean", "null"]},
+        "status_entry_count": {"type": "integer", "minimum": 0},
+        "status_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "operation_state": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": ["rebase", "merge", "cherry_pick", "revert", "bisect", "sequencer"]
+          }
+        },
+        "alternates_configured": {"type": "boolean"},
+        "gitmodules_present": {"type": "boolean"},
+        "upstream": {"type": ["string", "null"]},
+        "ahead": {"type": ["integer", "null"], "minimum": 0},
+        "behind": {"type": ["integer", "null"], "minimum": 0},
+        "upstream_freshness": {"const": "locally_available_only"}
+      },
+      "additionalProperties": false
+    },
+    "git_probe": {
+      "type": "object",
+      "required": ["returncode", "stderr"],
+      "properties": {
+        "returncode": {"type": "integer"},
+        "stderr": {"type": "string", "maxLength": 500}
+      },
+      "additionalProperties": false
+    },
+    "errors": {"type": "array", "items": {"type": "string"}},
+    "does_not_establish": {"type": "array", "items": {"type": "string"}},
+    "observation_sha256": {"$ref": "#/$defs/sha256"},
+    "observation_complete": {"type": "boolean"}
+  },
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {"is_git_checkout": {"const": true}},
+        "required": ["is_git_checkout"]
+      },
+      "then": {"required": ["identities", "git"]}
+    }
+  ]
+}

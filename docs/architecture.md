@@ -1,53 +1,110 @@
 # Reposkop architecture
 
-Status: normative.
+Status: normative for Reposkop 2.0.
 
-Reposkop has four layers only:
+## System responsibility
 
-1. **Target selection** — exactly one path or an explicit bounded target list.
-2. **Observation** — fixed read-only Git commands and path identity.
-3. **Evidence binding** — validation of externally supplied, versioned, digest- and freshness-bound lifecycle evidence.
-4. **Projection** — deterministic explanation with no effect authority.
+Reposkop owns the canonical representation of local checkout identity and the canonical comparison of bound checkout observations.
 
-The old Action, Approval, Execution, Runbook, Service-Gate and standalone UI layers are removed. They duplicated responsibilities already owned by Grabowski, Bureau, Infra and Leitstand.
+It has five layers:
+
+1. **Target binding** — exactly one explicit path and purpose.
+2. **Observation** — fixed read-only Git and filesystem probes.
+3. **Identity derivation** — repository and checkout identity digests from normalized, source-bound material.
+4. **Transition derivation** — deterministic before/after comparison with stable reason and anomaly codes.
+5. **Continuity classification** — `intact`, `explainable_drift`, `identity_break` or `inconclusive`.
+
+The result is authoritative inside this domain. Reposkop does not own task, lease, pull-request, remote-freshness or effect truth.
 
 ## Identity axes
 
 Reposkop keeps these identities separate:
 
-- path identity;
-- Git toplevel and Git common-directory identity;
-- remote repository identity;
-- purpose identity;
-- checkout role.
+- selected target path and purpose;
+- resolved Git toplevel;
+- Git directory;
+- Git common directory;
+- filesystem device and inode for each bound directory;
+- normalized remote repository identity;
+- checkout role;
+- repository identity digest;
+- checkout identity digest.
 
-Two paths can belong to the same Git repository and still have different purposes and lifecycle owners. Conversely, matching remote URLs do not prove that two checkouts are interchangeable.
+The repository identity represents the repository lineage available locally. A normalized remote is preferred when present; otherwise the Git common-directory identity is used.
 
-## Checkout roles
+The checkout identity represents one exact local working checkout. It binds path, Git directory, common directory, role and purpose. HEAD and dirty state are deliberately excluded so that legitimate work changes state without changing checkout identity.
 
-- `canonical_checkout`
-- `linked_worktree`
-- `auxiliary_clone`
-- `managed_repoground_source`
-- `legacy_repobrief_source`
-- `deployment_source`
-- `grabowski_workspace`
-- `grabowski_lifecycle_worktree`
-- `unknown`
+## State axes
 
-Explicit source-bound role input overrides heuristics. Heuristics are explanations, not ownership truth.
+Dynamic state includes:
 
-## Projection states
+- HEAD and branch;
+- detached state;
+- upstream and locally available ahead/behind counts;
+- dirty, staged, unstaged and untracked indicators;
+- a digest of porcelain status output;
+- active rebase, merge, cherry-pick, revert, bisect or sequencer markers;
+- alternates and `.gitmodules` presence.
 
-- `managed_retain`
-- `protected_active`
-- `dirty_preserve`
-- `remove_candidate`
-- `archive_then_remove`
-- `inconclusive`
+These fields belong to transition and continuity comparison, not checkout identity.
 
-All states are non-authoritative. `remove_candidate` means only that the supplied evidence currently contains no represented blocker. It never means that absence of a blocker has been proven globally.
+## Artifact contracts
 
-## Evidence freshness bound
+### Checkout observation v2
 
-Lifecycle evidence has a maximum five-minute validity interval. Longer envelopes are invalid, not merely stale. Every embedded source observation must also be no more than five minutes older than the envelope capture time; an old authority readback cannot become current merely by being wrapped in a fresh envelope. A digest inside a source reference is a binding claim supplied by the authority; Reposkop validates its shape and envelope binding but does not independently reproduce the authority's private source state.
+The observation is a canonical, digest-bound statement about one local target at one time. It is authoritative for the material it contains and explicitly does not establish remote freshness or external lifecycle truth.
+
+### Checkout transition v1
+
+The transition embeds and validates before and after observations. It compares identity and state fields and emits stable reason codes. Identity discontinuities are also emitted as anomaly codes.
+
+### Checkout continuity v1
+
+Continuity is derived only from a validated transition:
+
+- `intact`: same checkout identity and no tracked state change;
+- `explainable_drift`: same checkout identity with tracked local state changes;
+- `identity_break`: checkout or repository identity changed;
+- `inconclusive`: an observation or transition is invalid or incomplete.
+
+## Authority boundary
+
+| Concern | Authority |
+| --- | --- |
+| Checkout identity, local transition and continuity | Reposkop |
+| Task, claim, queue and completion | Bureau |
+| Local effects, leases, processes and worktree lifecycle | Grabowski |
+| Pull request, review and check state | GitHub / CI |
+| Commit-bound code context | RepoGround |
+| Stable system identity and relationships | Systemkatalog |
+| Presentation and orientation | Leitstand |
+
+`effect_authorized` remains false in Reposkop artifacts. This is not a statement that Reposkop lacks authority in its own domain. It states that observation authority is not effect permission.
+
+## Failure semantics
+
+- Invalid or incomplete observations produce `inconclusive` continuity.
+- A changed checkout identity produces `identity_break` even when the repository identity remains equal.
+- A changed repository identity produces both checkout and repository break anomalies.
+- A consumer must not silently replace an expected observation with a fresh one after an identity break.
+- Reposkop failure blocks only the risk-bearing operation that requires checkout identity; unrelated reads and other repositories continue.
+
+## Automation policy
+
+Accepted automation is event-bound:
+
+- pre-effect observation;
+- post-effect transition and continuity derivation;
+- interrupted-work resume checks;
+- delta-only publication of anomalies to Leitstand;
+- digest references in Grabowski, Bureau, Chronik and RepoGround artifacts.
+
+Rejected automation:
+
+- permanent daemon;
+- implicit home or fleet discovery;
+- unconditional scheduled full scans;
+- global stop semantics;
+- cleanup or repair execution;
+- task creation without Bureau assessment;
+- action approval derived only from Reposkop state.

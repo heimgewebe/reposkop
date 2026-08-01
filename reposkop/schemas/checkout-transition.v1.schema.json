@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "checkout-transition.v1.schema.json",
+  "type": "object",
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "nullableSha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+    "change": {
+      "type": "object",
+      "required": ["before", "after", "changed"],
+      "properties": {
+        "before": {},
+        "after": {},
+        "changed": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "schema_version",
+    "kind",
+    "generated_at",
+    "authority",
+    "before",
+    "after",
+    "before_observation_sha256",
+    "after_observation_sha256",
+    "identity_continuity",
+    "identity_changes",
+    "state_changes",
+    "reason_codes",
+    "anomaly_codes",
+    "effect_authorized",
+    "does_not_establish",
+    "transition_sha256"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "kind": {"const": "reposkop_checkout_transition"},
+    "generated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "authority": {
+      "type": "object",
+      "required": ["producer", "domain", "claim"],
+      "properties": {
+        "producer": {"const": "reposkop"},
+        "domain": {"const": "local_checkout_transition"},
+        "claim": {"const": "canonical"}
+      },
+      "additionalProperties": false
+    },
+    "before": {"type": "object"},
+    "after": {"type": "object"},
+    "before_observation_sha256": {"$ref": "#/$defs/nullableSha256"},
+    "after_observation_sha256": {"$ref": "#/$defs/nullableSha256"},
+    "identity_continuity": {
+      "enum": [
+        "same_checkout",
+        "same_repository_different_checkout",
+        "different_repository",
+        "inconclusive"
+      ]
+    },
+    "identity_changes": {
+      "type": "object",
+      "required": [
+        "path",
+        "git_dir",
+        "git_common_dir",
+        "remote",
+        "purpose",
+        "checkout_identity_sha256",
+        "repository_identity_sha256",
+        "role"
+      ],
+      "properties": {
+        "path": {"$ref": "#/$defs/change"},
+        "git_dir": {"$ref": "#/$defs/change"},
+        "git_common_dir": {"$ref": "#/$defs/change"},
+        "remote": {"$ref": "#/$defs/change"},
+        "purpose": {"$ref": "#/$defs/change"},
+        "checkout_identity_sha256": {"$ref": "#/$defs/change"},
+        "repository_identity_sha256": {"$ref": "#/$defs/change"},
+        "role": {"$ref": "#/$defs/change"}
+      },
+      "additionalProperties": false
+    },
+    "state_changes": {
+      "type": "object",
+      "required": [
+        "head",
+        "branch",
+        "detached",
+        "upstream",
+        "ahead",
+        "behind",
+        "dirty",
+        "status_sha256",
+        "operation_state",
+        "alternates_configured",
+        "gitmodules_present"
+      ],
+      "properties": {
+        "head": {"$ref": "#/$defs/change"},
+        "branch": {"$ref": "#/$defs/change"},
+        "detached": {"$ref": "#/$defs/change"},
+        "upstream": {"$ref": "#/$defs/change"},
+        "ahead": {"$ref": "#/$defs/change"},
+        "behind": {"$ref": "#/$defs/change"},
+        "dirty": {"$ref": "#/$defs/change"},
+        "status_sha256": {"$ref": "#/$defs/change"},
+        "operation_state": {"$ref": "#/$defs/change"},
+        "alternates_configured": {"$ref": "#/$defs/change"},
+        "gitmodules_present": {"$ref": "#/$defs/change"}
+      },
+      "additionalProperties": false
+    },
+    "reason_codes": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"}
+    },
+    "anomaly_codes": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"}
+    },
+    "effect_authorized": {"const": false},
+    "does_not_establish": {"type": "array", "items": {"type": "string"}},
+    "transition_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "additionalProperties": false
+}

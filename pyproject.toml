@@ -4,15 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "reposkop"
-version = "1.0.0"
-description = "Target-bound read-only repository and checkout coherence projection for Heimgewebe."
+version = "2.0.0"
+description = "Canonical local checkout identity, transition and continuity truth for Heimgewebe."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = ["jsonschema>=4.22"]
 
 [project.scripts]
 reposkop = "reposkop.cli:main"
-steuerboard = "steuerboard.cli:main"
 
 [project.optional-dependencies]
 test = ["pytest>=8", "ruff>=0.6"]
@@ -25,7 +24,7 @@ pythonpath = ["."]
 line-length = 100
 
 [tool.setuptools.packages.find]
-include = ["reposkop", "reposkop.*", "steuerboard", "steuerboard.*"]
+include = ["reposkop", "reposkop.*"]
 
 [tool.setuptools.package-data]
 reposkop = ["schemas/*.json"]
