@@ -40,6 +40,7 @@ def test_state_drift_preserves_checkout_identity(git_repo):
 
     continuity = build_continuity(transition)
     assert continuity["state"] == "explainable_drift"
+    assert continuity["transition_validation"]["valid"] is True
     assert validate_artifact(continuity)["valid"] is True
 
 
@@ -71,3 +72,15 @@ def test_purpose_change_breaks_checkout_binding(git_repo):
     continuity = observe_continuity(before, git_repo, purpose="deploy")
     assert continuity["state"] == "identity_break"
     assert "identity.purpose_changed" in continuity["reason_codes"]
+
+
+def test_invalid_transition_yields_valid_inconclusive_continuity(git_repo):
+    observation = observe_checkout(git_repo, purpose="resume")
+    transition = build_transition(observation, observation)
+    transition["transition_sha256"] = "0" * 64
+
+    continuity = build_continuity(transition)
+    assert continuity["state"] == "inconclusive"
+    assert continuity["transition_validation"]["valid"] is False
+    assert "evidence.transition_invalid" in continuity["reason_codes"]
+    assert validate_artifact(continuity)["valid"] is True
