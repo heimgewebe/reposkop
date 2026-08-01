@@ -1,10 +1,19 @@
 from __future__ import annotations
 
+from copy import deepcopy
 import subprocess
 
+from reposkop.canonical import sha256_json
 from reposkop.observation import observe_checkout
 from reposkop.schema_validation import validate_artifact
 from reposkop.transition import build_continuity, build_transition, observe_continuity
+
+
+def _rehash(artifact, digest_field):
+    artifact = deepcopy(artifact)
+    artifact.pop(digest_field, None)
+    artifact[digest_field] = sha256_json(artifact)
+    return artifact
 
 
 def test_observation_v2_has_canonical_checkout_identity(git_repo):
@@ -84,3 +93,50 @@ def test_invalid_transition_yields_valid_inconclusive_continuity(git_repo):
     assert continuity["transition_validation"]["valid"] is False
     assert "evidence.transition_invalid" in continuity["reason_codes"]
     assert validate_artifact(continuity)["valid"] is True
+
+
+def test_forged_transition_claim_is_rejected_after_rehash(git_repo, tmp_path):
+    worktree = tmp_path / "linked-forgery"
+    subprocess.run(
+        ["git", "-C", str(git_repo), "worktree", "add", "-qb", "forgery", str(worktree)],
+        check=True,
+    )
+    transition = build_transition(
+        observe_checkout(git_repo, purpose="resume"),
+        observe_checkout(worktree, purpose="resume"),
+    )
+    transition["identity_continuity"] = "same_checkout"
+    transition = _rehash(transition, "transition_sha256")
+
+    validation = validate_artifact(transition)
+    assert validation["valid"] is False
+    assert any(error.get("path") == "identity_continuity" for error in validation["errors"])
+    assert build_continuity(transition)["state"] == "inconclusive"
+
+
+def test_forged_continuity_claim_is_rejected_after_rehash(git_repo):
+    observation = observe_checkout(git_repo, purpose="resume")
+    transition = build_transition(observation, observation)
+    continuity = build_continuity(transition)
+    continuity["state"] = "identity_break"
+    continuity = _rehash(continuity, "continuity_sha256")
+
+    validation = validate_artifact(continuity)
+    assert validation["valid"] is False
+    assert any(error.get("path") == "state" for error in validation["errors"])
+
+
+def test_ahead_and_behind_are_transition_state(git_repo):
+    before = observe_checkout(git_repo, purpose="resume")
+    before["git"]["upstream"] = "origin/main"
+    before["git"]["ahead"] = 0
+    before["git"]["behind"] = 0
+    before = _rehash(before, "observation_sha256")
+    after = deepcopy(before)
+    after["git"]["ahead"] = 1
+    after = _rehash(after, "observation_sha256")
+
+    transition = build_transition(before, after)
+    assert transition["state_changes"]["ahead"]["changed"] is True
+    assert "continuity.ahead_changed" in transition["reason_codes"]
+    assert build_continuity(transition)["state"] == "explainable_drift"
