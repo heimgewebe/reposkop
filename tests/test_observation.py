@@ -102,19 +102,33 @@ def test_remote_hosts_do_not_collide(git_repo):
     )
 
 
+def test_raw_non_utf8_status_bytes_have_distinct_digests(git_repo, monkeypatch):
+    import subprocess
+
+    import reposkop.observation as module
+
+    payloads = iter((b"?? \xff\0", b"?? \xfe\0"))
+
+    def raw_probe(path, arguments, *, timeout=10):
+        return subprocess.CompletedProcess(arguments, 0, next(payloads), b"")
+
+    monkeypatch.setattr(module, "_git_bytes", raw_probe)
+    first = module.observe_checkout(git_repo)
+    second = module.observe_checkout(git_repo)
+    assert first["git"]["status_sha256"] != second["git"]["status_sha256"]
+    assert first["git"]["untracked"] is True
+    assert second["git"]["untracked"] is True
+
+
 def test_failed_status_probe_is_incomplete(git_repo, monkeypatch):
     import subprocess
 
     import reposkop.observation as module
 
-    original = module._git
-
     def probe(path, arguments, *, timeout=10):
-        if arguments and arguments[0] == "status":
-            return subprocess.CompletedProcess(arguments, 1, "", "status failed")
-        return original(path, arguments, timeout=timeout)
+        return subprocess.CompletedProcess(arguments, 1, b"", b"status failed")
 
-    monkeypatch.setattr(module, "_git", probe)
+    monkeypatch.setattr(module, "_git_bytes", probe)
     result = module.observe_checkout(git_repo)
     assert result["observation_complete"] is False
     assert result["git"]["dirty"] is None
