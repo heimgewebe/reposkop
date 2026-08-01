@@ -200,6 +200,7 @@ def build_continuity(transition: dict[str, Any]) -> dict[str, Any]:
         "transition_sha256": transition.get("transition_sha256")
         if isinstance(transition, dict)
         else None,
+        "transition_validation": validation,
         "reason_codes": sorted(set(reason_codes)),
         "effect_authorized": False,
         "does_not_establish": [
