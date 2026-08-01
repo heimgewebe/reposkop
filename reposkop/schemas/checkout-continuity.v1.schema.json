@@ -14,6 +14,7 @@
     "state",
     "transition",
     "transition_sha256",
+    "transition_validation",
     "reason_codes",
     "effect_authorized",
     "does_not_establish",
@@ -41,6 +42,17 @@
     },
     "transition": {"type": "object"},
     "transition_sha256": {"$ref": "#/$defs/nullableSha256"},
+    "transition_validation": {
+      "type": "object",
+      "required": ["valid", "kind", "schema", "errors"],
+      "properties": {
+        "valid": {"type": "boolean"},
+        "kind": {"type": ["string", "null"]},
+        "schema": {"type": ["string", "null"]},
+        "errors": {"type": "array"}
+      },
+      "additionalProperties": false
+    },
     "reason_codes": {
       "type": "array",
       "uniqueItems": true,
