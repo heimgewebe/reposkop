@@ -6,6 +6,7 @@ from reposkop.observation import observe_checkout
 def test_clean_repository_observation(git_repo):
     result = observe_checkout(git_repo)
     assert result["kind"] == "reposkop_checkout_observation"
+    assert result["schema_version"] == 2
     assert result["is_git_checkout"] is True
     assert result["git"]["dirty"] is False
     assert result["role"]["value"] == "canonical_checkout"
@@ -75,9 +76,30 @@ def test_remote_credentials_are_not_emitted(git_repo):
         check=True,
     )
     result = observe_checkout(git_repo)
-    assert result["identities"]["remote"] == "owner/repo"
+    assert result["identities"]["remote"] == "example.invalid/owner/repo"
     assert "secret" not in str(result)
     assert "origin_url" not in result["git"]
+
+
+def test_remote_hosts_do_not_collide(git_repo):
+    import subprocess
+
+    subprocess.run(
+        ["git", "-C", str(git_repo), "remote", "add", "origin", "git@host-a:owner/repo.git"],
+        check=True,
+    )
+    first = observe_checkout(git_repo)
+    subprocess.run(
+        ["git", "-C", str(git_repo), "remote", "set-url", "origin", "git@host-b:owner/repo.git"],
+        check=True,
+    )
+    second = observe_checkout(git_repo)
+    assert first["identities"]["remote"] == "host-a/owner/repo"
+    assert second["identities"]["remote"] == "host-b/owner/repo"
+    assert (
+        first["identities"]["repository_identity_sha256"]
+        != second["identities"]["repository_identity_sha256"]
+    )
 
 
 def test_failed_status_probe_is_incomplete(git_repo, monkeypatch):
@@ -97,6 +119,17 @@ def test_failed_status_probe_is_incomplete(git_repo, monkeypatch):
     assert result["observation_complete"] is False
     assert result["git"]["dirty"] is None
     assert "status_failed" in result["errors"]
+
+
+def test_missing_stat_identity_is_incomplete(git_repo, monkeypatch):
+    import reposkop.observation as module
+
+    monkeypatch.setattr(module, "_stat_identity", lambda path: None)
+    result = module.observe_checkout(git_repo)
+    assert result["observation_complete"] is False
+    assert "target_identity_unavailable" in result["errors"]
+    assert "git_dir_identity_unavailable" in result["errors"]
+    assert "git_common_dir_identity_unavailable" in result["errors"]
 
 
 def test_git_timeout_is_reported_without_crash(git_repo, monkeypatch):
