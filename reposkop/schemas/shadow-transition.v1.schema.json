@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "shadow-transition.v1.schema.json",
+  "type": "object",
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "nullableSha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"}
+  },
+  "required": [
+    "schema_version",
+    "kind",
+    "generated_at",
+    "authority",
+    "continuity",
+    "before_observation_sha256",
+    "after_observation_sha256",
+    "before_repository_identity_sha256",
+    "after_repository_identity_sha256",
+    "before_checkout_identity_sha256",
+    "after_checkout_identity_sha256",
+    "transition_sha256",
+    "continuity_sha256",
+    "identity_continuity",
+    "continuity_state",
+    "local_identity_continuity",
+    "reason_codes",
+    "anomaly_codes",
+    "does_not_establish",
+    "shadow_transition_sha256"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "kind": {"const": "reposkop_shadow_transition"},
+    "generated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "authority": {
+      "type": "object",
+      "required": ["producer", "domain", "claim"],
+      "properties": {
+        "producer": {"const": "reposkop"},
+        "domain": {"const": "local_checkout_identity_shadow"},
+        "claim": {"const": "canonical"}
+      },
+      "additionalProperties": false
+    },
+    "continuity": {
+      "type": "object",
+      "required": ["schema_version", "kind", "continuity_sha256"],
+      "properties": {
+        "schema_version": {"const": 1},
+        "kind": {"const": "reposkop_checkout_continuity"},
+        "continuity_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "before_observation_sha256": {"$ref": "#/$defs/nullableSha256"},
+    "after_observation_sha256": {"$ref": "#/$defs/nullableSha256"},
+    "before_repository_identity_sha256": {"$ref": "#/$defs/nullableSha256"},
+    "after_repository_identity_sha256": {"$ref": "#/$defs/nullableSha256"},
+    "before_checkout_identity_sha256": {"$ref": "#/$defs/nullableSha256"},
+    "after_checkout_identity_sha256": {"$ref": "#/$defs/nullableSha256"},
+    "transition_sha256": {"$ref": "#/$defs/sha256"},
+    "continuity_sha256": {"$ref": "#/$defs/sha256"},
+    "identity_continuity": {
+      "enum": [
+        "same_checkout",
+        "same_repository_different_checkout",
+        "different_repository",
+        "inconclusive"
+      ]
+    },
+    "continuity_state": {
+      "enum": ["intact", "explainable_drift", "identity_break", "inconclusive"]
+    },
+    "local_identity_continuity": {
+      "enum": ["continuous", "broken", "could_not_be_established"]
+    },
+    "reason_codes": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"}
+    },
+    "anomaly_codes": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"}
+    },
+    "does_not_establish": {"type": "array", "items": {"type": "string"}},
+    "shadow_transition_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "additionalProperties": false
+}

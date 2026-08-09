@@ -7,7 +7,7 @@ from typing import Any
 
 from jsonschema import Draft202012Validator
 
-from .canonical import sha256_json
+from .canonical import sha256_json, valid_sha256_or_none
 from .timeutil import parse_utc
 from .transition_claims import derive_continuity_claims, derive_transition_claims
 
@@ -16,10 +16,13 @@ _SCHEMA_BY_KIND_VERSION = {
     ("reposkop_checkout_observation", 2): "checkout-observation.v2.schema.json",
     ("reposkop_checkout_transition", 1): "checkout-transition.v1.schema.json",
     ("reposkop_checkout_continuity", 1): "checkout-continuity.v1.schema.json",
+    ("reposkop_shadow_transition", 1): "shadow-transition.v1.schema.json",
     ("reposkop_lifecycle_evidence", 1): "lifecycle-evidence.v1.schema.json",
     ("reposkop_coherence_projection", 1): "coherence-projection.v1.schema.json",
+    ("reposkop_coherence_projection", 2): "coherence-projection.v2.schema.json",
     ("reposkop_coherence_report", 1): "coherence-report.v1.schema.json",
     ("reposkop_coherence_report", 2): "coherence-report.v2.schema.json",
+    ("reposkop_coherence_report", 3): "coherence-report.v3.schema.json",
     ("reposkop_inventory_config", 1): "inventory-config.v1.schema.json",
     ("reposkop_explicit_inventory", 1): "explicit-inventory.v1.schema.json",
 }
@@ -27,6 +30,7 @@ _DIGEST_BY_KIND = {
     "reposkop_checkout_observation": "observation_sha256",
     "reposkop_checkout_transition": "transition_sha256",
     "reposkop_checkout_continuity": "continuity_sha256",
+    "reposkop_shadow_transition": "shadow_transition_sha256",
     "reposkop_coherence_projection": "projection_sha256",
     "reposkop_coherence_report": "report_sha256",
     "reposkop_explicit_inventory": "inventory_sha256",
@@ -117,6 +121,7 @@ def validate_artifact(value: dict[str, Any]) -> dict[str, Any]:
         "reposkop_checkout_observation": ("observed_at",),
         "reposkop_checkout_transition": ("generated_at",),
         "reposkop_checkout_continuity": ("generated_at",),
+        "reposkop_shadow_transition": ("generated_at",),
         "reposkop_coherence_report": ("generated_at",),
         "reposkop_explicit_inventory": ("generated_at",),
     }.get(kind, ())
@@ -125,6 +130,106 @@ def validate_artifact(value: dict[str, Any]) -> dict[str, Any]:
             parse_utc(value.get(field))
         except (TypeError, ValueError):
             rendered_errors.append({"path": field, "message": "timestamp is not normalized UTC"})
+
+    if kind == "reposkop_shadow_transition":
+        continuity = value.get("continuity")
+        _nested_validation_error(
+            rendered_errors,
+            path="continuity",
+            value=continuity,
+            expected_kind="reposkop_checkout_continuity",
+        )
+        transition = continuity.get("transition") if isinstance(continuity, dict) else None
+        if (
+            isinstance(continuity, dict)
+            and value.get("continuity_sha256") != continuity.get("continuity_sha256")
+        ):
+            rendered_errors.append(
+                {
+                    "path": "continuity_sha256",
+                    "message": "shadow is not bound to embedded continuity",
+                }
+            )
+        if isinstance(transition, dict):
+            if value.get("transition_sha256") != transition.get("transition_sha256"):
+                rendered_errors.append(
+                    {
+                        "path": "transition_sha256",
+                        "message": "shadow is not bound to embedded transition",
+                    }
+                )
+            before = transition.get("before")
+            after = transition.get("after")
+            before_validation = (
+                validate_artifact(before) if isinstance(before, dict) else {"valid": False}
+            )
+            after_validation = (
+                validate_artifact(after) if isinstance(after, dict) else {"valid": False}
+            )
+            expected_transition_claims = derive_transition_claims(
+                before,
+                after,
+                before_valid=before_validation.get("valid") is True,
+                after_valid=after_validation.get("valid") is True,
+            )
+            transition_validation = validate_artifact(transition)
+            if (
+                before_validation.get("valid") is True
+                and after_validation.get("valid") is True
+                and transition_validation.get("valid") is not True
+            ):
+                rendered_errors.append(
+                    {
+                        "path": "continuity/transition",
+                        "message": "transition is invalid despite valid embedded observations",
+                    }
+                )
+            expected_continuity_claims = derive_continuity_claims(
+                transition,
+                transition_valid=transition_validation.get("valid") is True,
+            )
+            identity_continuity = expected_transition_claims["identity_continuity"]
+            expected_local_identity = {
+                "same_checkout": "continuous",
+                "same_repository_different_checkout": "broken",
+                "different_repository": "broken",
+                "inconclusive": "could_not_be_established",
+            }[identity_continuity]
+            before_identities = before.get("identities", {}) if isinstance(before, dict) else {}
+            after_identities = after.get("identities", {}) if isinstance(after, dict) else {}
+            expected_shadow_claims = {
+                "before_observation_sha256": valid_sha256_or_none(
+                    before.get("observation_sha256") if isinstance(before, dict) else None
+                ),
+                "after_observation_sha256": valid_sha256_or_none(
+                    after.get("observation_sha256") if isinstance(after, dict) else None
+                ),
+                "before_repository_identity_sha256": valid_sha256_or_none(
+                    before_identities.get("repository_identity_sha256")
+                ),
+                "after_repository_identity_sha256": valid_sha256_or_none(
+                    after_identities.get("repository_identity_sha256")
+                ),
+                "before_checkout_identity_sha256": valid_sha256_or_none(
+                    before_identities.get("checkout_identity_sha256")
+                ),
+                "after_checkout_identity_sha256": valid_sha256_or_none(
+                    after_identities.get("checkout_identity_sha256")
+                ),
+                "identity_continuity": identity_continuity,
+                "continuity_state": expected_continuity_claims["state"],
+                "local_identity_continuity": expected_local_identity,
+                "reason_codes": expected_continuity_claims["reason_codes"],
+                "anomaly_codes": expected_transition_claims["anomaly_codes"],
+            }
+            _claim_mismatch_errors(rendered_errors, value, expected_shadow_claims)
+        else:
+            rendered_errors.append(
+                {
+                    "path": "continuity/transition",
+                    "message": "embedded continuity does not contain a transition",
+                }
+            )
 
     if kind == "reposkop_coherence_report":
         observation = value.get("observation")

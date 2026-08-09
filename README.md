@@ -66,12 +66,21 @@ Continuity classifies a transition as:
 - `identity_break`
 - `inconclusive`
 
+### Shadow transition v1
+
+A self-contained shadow transition embeds validated continuity evidence (including its transition
+and captured before/after observations) and exposes their canonical digests. Its
+`local_identity_continuity` result is only
+`continuous`, `broken` or `could_not_be_established`; it never decides whether an operation was
+allowed.
+
 ## Commands
 
 ```text
 reposkop inspect <path> [--role <role>] [--purpose <purpose>] --json
 reposkop transition <path> --before <observation.json> [--role <role>] [--purpose <purpose>] --json
 reposkop continuity <path> --expected <observation.json> [--role <role>] [--purpose <purpose>] --json
+reposkop shadow --before <observation.json> --after <observation.json> --json
 reposkop report <path> [--role <role>] [--purpose <purpose>] [--lifecycle-evidence <file>] --json
 reposkop project <observation.json> [--lifecycle-evidence <file>] --json
 reposkop inventory --config <explicit-targets.json> --json
@@ -104,4 +113,6 @@ Read-only repository inspection does not require this lifecycle.
 make deploy-check
 ```
 
-See [Checkout identity and transition plan](docs/checkout-identity-transition-plan.md) and [Architecture](docs/architecture.md).
+See [Checkout identity and transition plan](docs/checkout-identity-transition-plan.md),
+[Differential value-falsification plan](docs/value-falsification.md) and
+[Architecture](docs/architecture.md).

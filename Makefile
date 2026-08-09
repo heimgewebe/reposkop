@@ -22,6 +22,8 @@ smoke:
 	git -C "$$tmp" add file.txt; \
 	git -C "$$tmp" commit -qm init; \
 	$(PYTHON) -m reposkop inspect "$$tmp" --purpose smoke --json > "$$tmp/before.json"; \
+	$(PYTHON) -m reposkop inspect "$$tmp" --purpose smoke --json > "$$tmp/after.json"; \
+	$(PYTHON) -m reposkop shadow --before "$$tmp/before.json" --after "$$tmp/after.json" --json | $(PYTHON) -m json.tool >/dev/null; \
 	$(PYTHON) -m reposkop report "$$tmp" --purpose smoke --json | $(PYTHON) -m json.tool >/dev/null; \
 	$(PYTHON) -m reposkop transition "$$tmp" --before "$$tmp/before.json" --purpose smoke --json | $(PYTHON) -m json.tool >/dev/null; \
 	$(PYTHON) -m reposkop continuity "$$tmp" --expected "$$tmp/before.json" --purpose smoke --json | $(PYTHON) -m json.tool >/dev/null; \

@@ -6,6 +6,7 @@ Reposkop exposes only target-bound, deterministic, read-only repository and chec
 
 ```text
 python -m reposkop inspect <path> --json
+python -m reposkop shadow --before <observation.json> --after <observation.json> --json
 python -m reposkop report <path> --json
 python -m reposkop project <observation.json> --json
 python -m reposkop inventory --config <explicit-targets.json> --json
@@ -14,9 +15,16 @@ python -m reposkop validate <artifact.json> --json
 
 `inspect` and `report` require one explicit repository or checkout path. `inventory` accepts only an explicit bounded target list. Reposkop performs no implicit filesystem discovery and no global repository scan.
 
+`shadow` summarizes two separately captured observations. It reports only whether local checkout
+identity stayed continuous, broke or could not be established; it does not evaluate operation
+intent or permission.
+
 ## Authority boundary
 
-Reposkop may observe local Git and checkout state and derive a coherence projection from supplied evidence. It does not establish task truth, merge permission, runtime authority or effect authorization. Every report keeps `effect_authorized` fixed to `false`.
+Reposkop may observe local Git and checkout state and derive a local coherence projection. Supplied
+lifecycle evidence and its gaps remain separately labeled foreign-authority descriptions; they do
+not select local coherence posture. Reposkop does not establish task truth, merge permission,
+runtime authority or effect authorization. Every report keeps `effect_authorized` fixed to `false`.
 
 Reposkop never fetches, pulls, checks out branches, pushes, deletes, cleans up, dispatches tasks or changes host state.
 

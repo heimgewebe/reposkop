@@ -140,3 +140,32 @@ def test_ahead_and_behind_are_transition_state(git_repo):
     assert transition["state_changes"]["ahead"]["changed"] is True
     assert "continuity.ahead_changed" in transition["reason_codes"]
     assert build_continuity(transition)["state"] == "explainable_drift"
+
+
+def test_actual_incomplete_git_probe_remains_fail_closed(git_repo, monkeypatch):
+    import reposkop.observation as observation_module
+
+    before = observe_checkout(git_repo, purpose="resume")
+
+    def failed_status_probe(path, arguments, *, timeout=10):
+        return subprocess.CompletedProcess(arguments, 1, b"", b"status failed")
+
+    monkeypatch.setattr(observation_module, "_git_bytes", failed_status_probe)
+    after = observe_checkout(git_repo, purpose="resume")
+    transition = build_transition(before, after)
+    continuity = build_continuity(transition)
+
+    assert after["observation_complete"] is False
+    assert after["errors"] == ["status_failed"]
+    assert transition["identity_continuity"] == "inconclusive"
+    assert transition["reason_codes"] == [
+        "continuity.dirty_state_changed",
+        "continuity.status_changed",
+    ]
+    assert transition["anomaly_codes"] == ["evidence.after_incomplete"]
+    assert continuity["state"] == "inconclusive"
+    assert continuity["reason_codes"] == [
+        "continuity.dirty_state_changed",
+        "continuity.status_changed",
+        "evidence.after_incomplete",
+    ]

@@ -67,6 +67,28 @@ Continuity is derived only from a validated transition:
 - `identity_break`: checkout or repository identity changed;
 - `inconclusive`: an observation or transition is invalid or incomplete.
 
+### Shadow transition v1
+
+The shadow artifact is a self-contained, operation-agnostic summary derived from two captured
+observations. It embeds validated continuity evidence, which recursively carries the transition and
+source observations, and exposes canonical source/transition/continuity digests, continuity state,
+reason/anomaly codes and a tri-state local identity result. Validation recomputes the derived claims
+from those embedded sources. It does not contain an operation permission decision.
+
+### Coherence projection v2
+
+Projection state is local-only. A valid, complete Git observation produces `local_coherent` even
+when lifecycle evidence is missing, invalid, stale or subject-mismatched. Those conditions are
+preserved separately in `foreign_authority_gaps`; supplied active bindings remain descriptive.
+`local_coherent` means that local checkout observation was established, not that the tree is clean,
+an operation is safe, or an effect is authorized. Invalid or incomplete local Git observation
+remains `inconclusive`.
+
+Legacy lifecycle-oriented projection states remain schema-valid for persisted artifacts, but the
+current projector does not derive cleanup, archive or protection decisions from foreign evidence.
+The boundary correction is versioned additively as projection v2 and coherence report v3; v1/v2
+report artifacts and projection v1 remain valid historical inputs.
+
 ## Authority boundary
 
 | Concern | Authority |
@@ -88,6 +110,8 @@ Continuity is derived only from a validated transition:
 - A changed repository identity produces both checkout and repository break anomalies.
 - A consumer must not silently replace an expected observation with a fresh one after an identity break.
 - Reposkop failure blocks only the risk-bearing operation that requires checkout identity; unrelated reads and other repositories continue.
+- Missing or stale task, lifecycle, pull-request or remote-freshness authority is not a local
+  checkout-integrity failure.
 
 ## Automation policy
 
@@ -108,3 +132,10 @@ Rejected automation:
 - cleanup or repair execution;
 - task creation without Bureau assessment;
 - action approval derived only from Reposkop state.
+
+## Standalone retention criterion
+
+The component remains standalone only while targeted fault injection and real shadow transitions
+demonstrate material identity substitutions uniquely detected by Reposkop. If they do not, prefer
+library migration into Grabowski or retirement over scope expansion. See
+[Differential value-falsification plan](value-falsification.md).
