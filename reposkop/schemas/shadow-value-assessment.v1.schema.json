@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "shadow-value-assessment.v1.schema.json",
+  "type": "object",
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  },
+  "required": [
+    "schema_version",
+    "kind",
+    "generated_at",
+    "authority",
+    "shadow_transition",
+    "shadow_transition_sha256",
+    "baseline_fields",
+    "baseline_changed_fields",
+    "identity_continuity",
+    "local_identity_continuity",
+    "differential_value",
+    "does_not_establish",
+    "assessment_sha256"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "kind": {
+      "const": "reposkop_shadow_value_assessment"
+    },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "authority": {
+      "type": "object",
+      "required": [
+        "producer",
+        "domain",
+        "claim"
+      ],
+      "properties": {
+        "producer": {
+          "const": "reposkop"
+        },
+        "domain": {
+          "const": "local_checkout_identity_differential"
+        },
+        "claim": {
+          "const": "canonical"
+        }
+      },
+      "additionalProperties": false
+    },
+    "shadow_transition": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "kind",
+        "shadow_transition_sha256"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "reposkop_shadow_transition"
+        },
+        "shadow_transition_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "shadow_transition_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "baseline_fields": {
+      "const": [
+        "path",
+        "branch",
+        "head",
+        "git_common_dir"
+      ]
+    },
+    "baseline_changed_fields": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "path",
+          "branch",
+          "head",
+          "git_common_dir"
+        ]
+      }
+    },
+    "identity_continuity": {
+      "enum": [
+        "same_checkout",
+        "same_repository_different_checkout",
+        "different_repository",
+        "inconclusive"
+      ]
+    },
+    "local_identity_continuity": {
+      "enum": [
+        "continuous",
+        "broken",
+        "could_not_be_established"
+      ]
+    },
+    "differential_value": {
+      "enum": [
+        "unique_identity_signal",
+        "baseline_visible_change",
+        "no_identity_break",
+        "inconclusive"
+      ]
+    },
+    "does_not_establish": {
+      "const": [
+        "materiality",
+        "recovery_improvement",
+        "wrong_checkout_prevention",
+        "operation_intent",
+        "operation_allowed",
+        "effect_authorization",
+        "task_or_lease_truth",
+        "pull_request_truth",
+        "remote_freshness"
+      ]
+    },
+    "assessment_sha256": {
+      "$ref": "#/$defs/sha256"
+    }
+  },
+  "additionalProperties": false
+}

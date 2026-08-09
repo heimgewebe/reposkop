@@ -8,6 +8,7 @@ from typing import Any
 from jsonschema import Draft202012Validator
 
 from .canonical import sha256_json, valid_sha256_or_none
+from .shadow_value import derive_shadow_value_claims
 from .timeutil import parse_utc
 from .transition_claims import derive_continuity_claims, derive_transition_claims
 
@@ -17,6 +18,7 @@ _SCHEMA_BY_KIND_VERSION = {
     ("reposkop_checkout_transition", 1): "checkout-transition.v1.schema.json",
     ("reposkop_checkout_continuity", 1): "checkout-continuity.v1.schema.json",
     ("reposkop_shadow_transition", 1): "shadow-transition.v1.schema.json",
+    ("reposkop_shadow_value_assessment", 1): "shadow-value-assessment.v1.schema.json",
     ("reposkop_lifecycle_evidence", 1): "lifecycle-evidence.v1.schema.json",
     ("reposkop_coherence_projection", 1): "coherence-projection.v1.schema.json",
     ("reposkop_coherence_projection", 2): "coherence-projection.v2.schema.json",
@@ -31,6 +33,7 @@ _DIGEST_BY_KIND = {
     "reposkop_checkout_transition": "transition_sha256",
     "reposkop_checkout_continuity": "continuity_sha256",
     "reposkop_shadow_transition": "shadow_transition_sha256",
+    "reposkop_shadow_value_assessment": "assessment_sha256",
     "reposkop_coherence_projection": "projection_sha256",
     "reposkop_coherence_report": "report_sha256",
     "reposkop_explicit_inventory": "inventory_sha256",
@@ -122,6 +125,7 @@ def validate_artifact(value: dict[str, Any]) -> dict[str, Any]:
         "reposkop_checkout_transition": ("generated_at",),
         "reposkop_checkout_continuity": ("generated_at",),
         "reposkop_shadow_transition": ("generated_at",),
+        "reposkop_shadow_value_assessment": ("generated_at",),
         "reposkop_coherence_report": ("generated_at",),
         "reposkop_explicit_inventory": ("generated_at",),
     }.get(kind, ())
@@ -230,6 +234,23 @@ def validate_artifact(value: dict[str, Any]) -> dict[str, Any]:
                     "message": "embedded continuity does not contain a transition",
                 }
             )
+
+    if kind == "reposkop_shadow_value_assessment":
+        shadow = value.get("shadow_transition")
+        _nested_validation_error(
+            rendered_errors,
+            path="shadow_transition",
+            value=shadow,
+            expected_kind="reposkop_shadow_transition",
+        )
+        shadow_validation = (
+            validate_artifact(shadow) if isinstance(shadow, dict) else {"valid": False}
+        )
+        if isinstance(shadow, dict):
+            expected_claims = derive_shadow_value_claims(
+                shadow, shadow_valid=shadow_validation.get("valid") is True
+            )
+            _claim_mismatch_errors(rendered_errors, value, expected_claims)
 
     if kind == "reposkop_coherence_report":
         observation = value.get("observation")

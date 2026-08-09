@@ -13,6 +13,7 @@ from .projection import project_coherence
 from .report import build_report
 from .schema_validation import validate_artifact
 from .shadow import build_shadow_transition
+from .shadow_value import build_shadow_value_assessment
 from .transition import observe_continuity, observe_transition
 
 
@@ -58,6 +59,13 @@ def build_parser() -> argparse.ArgumentParser:
     shadow.add_argument("--before", required=True)
     shadow.add_argument("--after", required=True)
     shadow.add_argument("--json", action="store_true", required=True)
+
+    shadow_value = sub.add_parser(
+        "shadow-value",
+        help="measure differential local identity signal in one shadow transition",
+    )
+    shadow_value.add_argument("--shadow", required=True)
+    shadow_value.add_argument("--json", action="store_true", required=True)
 
     report = sub.add_parser("report", help="build one source-bound coherence report")
     report.add_argument("path")
@@ -106,6 +114,8 @@ def main(argv: list[str] | None = None) -> int:
             )
         elif args.command == "shadow":
             _emit(build_shadow_transition(load_json(args.before), load_json(args.after)))
+        elif args.command == "shadow-value":
+            _emit(build_shadow_value_assessment(load_json(args.shadow)))
         elif args.command == "report":
             evidence = load_json(args.lifecycle_evidence) if args.lifecycle_evidence else None
             _emit(
