@@ -13,9 +13,11 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
+from reposkop.canonical import sha256_json
 from reposkop.observation import observe_checkout
 from reposkop.schema_validation import validate_artifact
 from reposkop.shadow import build_shadow_transition
+from reposkop.shadow_value import build_shadow_value_assessment
 from reposkop.transition import build_continuity, build_transition
 
 _PURPOSE = "differential-falsification"
@@ -37,6 +39,7 @@ class ExpectedDifferentialOutcome:
     anomaly_codes: tuple[str, ...]
     continuity_state: str
     local_identity_continuity: str
+    differential_value: str
 
 
 def _git(path: Path, *arguments: str) -> None:
@@ -126,6 +129,14 @@ def _assert_differential(before, after, expected: ExpectedDifferentialOutcome) -
     assert shadow["anomaly_codes"] == list(expected.anomaly_codes)
     assert validate_artifact(shadow)["valid"] is True
 
+    assessment = build_shadow_value_assessment(shadow)
+    assert assessment["shadow_transition_sha256"] == shadow["shadow_transition_sha256"]
+    assert assessment["baseline_changed_fields"] == list(expected.baseline_changed_fields)
+    assert assessment["identity_continuity"] == expected.identity_continuity
+    assert assessment["local_identity_continuity"] == expected.local_identity_continuity
+    assert assessment["differential_value"] == expected.differential_value
+    assert validate_artifact(assessment)["valid"] is True
+
 
 def test_unique_same_path_checkout_replacement_preserving_apparent_git_state(tmp_path):
     """Unique target: the modeled path/branch/HEAD/common-dir guard stays unchanged."""
@@ -161,6 +172,7 @@ def test_unique_same_path_checkout_replacement_preserving_apparent_git_state(tmp
             anomaly_codes=("identity.checkout_break",),
             continuity_state="identity_break",
             local_identity_continuity="broken",
+            differential_value="unique_identity_signal",
         ),
     )
 
@@ -197,6 +209,7 @@ def test_unique_git_metadata_substitution_behind_stable_redirection_path(tmp_pat
             anomaly_codes=("identity.checkout_break",),
             continuity_state="identity_break",
             local_identity_continuity="broken",
+            differential_value="unique_identity_signal",
         ),
     )
 
@@ -231,6 +244,7 @@ def test_generic_git_dir_and_common_dir_pointer_redirection(tmp_path):
             anomaly_codes=("identity.checkout_break",),
             continuity_state="identity_break",
             local_identity_continuity="broken",
+            differential_value="baseline_visible_change",
         ),
     )
 
@@ -264,6 +278,7 @@ def test_unique_remote_identity_substitution(tmp_path):
             anomaly_codes=("identity.checkout_break", "identity.repository_break"),
             continuity_state="identity_break",
             local_identity_continuity="broken",
+            differential_value="unique_identity_signal",
         ),
     )
 
@@ -298,6 +313,7 @@ def test_generic_different_repository_with_superficially_similar_git_state(tmp_p
             anomaly_codes=("identity.checkout_break", "identity.repository_break"),
             continuity_state="identity_break",
             local_identity_continuity="broken",
+            differential_value="baseline_visible_change",
         ),
     )
 
@@ -326,5 +342,28 @@ def test_negative_control_harmless_worktree_state_drift(tmp_path):
             anomaly_codes=(),
             continuity_state="explainable_drift",
             local_identity_continuity="continuous",
+            differential_value="no_identity_break",
         ),
+    )
+
+
+def test_shadow_value_validation_recomputes_derived_claims(tmp_path):
+    target = _clone(_seed(tmp_path / "seed"), tmp_path / "target")
+    before = _observe(target)
+    (target / "file.txt").write_text("ordinary edit\n", encoding="utf-8")
+    after = _observe(target)
+    assessment = build_shadow_value_assessment(build_shadow_transition(before, after))
+
+    assessment["differential_value"] = "unique_identity_signal"
+    unsigned = dict(assessment)
+    unsigned.pop("assessment_sha256")
+    assessment["assessment_sha256"] = sha256_json(unsigned)
+
+    validation = validate_artifact(assessment)
+    assert validation["valid"] is False
+    assert any(
+        error.get("path") == "differential_value"
+        and "derived claim" in error.get("message", "")
+        for error in validation["errors"]
+        if isinstance(error, dict)
     )

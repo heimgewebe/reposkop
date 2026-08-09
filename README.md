@@ -74,6 +74,14 @@ and captured before/after observations) and exposes their canonical digests. Its
 `continuous`, `broken` or `could_not_be_established`; it never decides whether an operation was
 allowed.
 
+### Shadow value assessment v1
+
+A shadow value assessment embeds one validated shadow transition and compares the same four-field
+non-authoritative baseline used by the falsification harness: path, branch, HEAD and Git common-dir
+path. It classifies the local result as `unique_identity_signal`, `baseline_visible_change`,
+`no_identity_break` or `inconclusive`. The artifact deliberately does not claim materiality, recovery
+value, wrong-checkout prevention or effect permission.
+
 ## Commands
 
 ```text
@@ -81,6 +89,7 @@ reposkop inspect <path> [--role <role>] [--purpose <purpose>] --json
 reposkop transition <path> --before <observation.json> [--role <role>] [--purpose <purpose>] --json
 reposkop continuity <path> --expected <observation.json> [--role <role>] [--purpose <purpose>] --json
 reposkop shadow --before <observation.json> --after <observation.json> --json
+reposkop shadow-value --shadow <shadow.json> --json
 reposkop report <path> [--role <role>] [--purpose <purpose>] [--lifecycle-evidence <file>] --json
 reposkop project <observation.json> [--lifecycle-evidence <file>] --json
 reposkop inventory --config <explicit-targets.json> --json

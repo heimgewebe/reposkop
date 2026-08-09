@@ -61,6 +61,18 @@ codes; and only the tri-state local identity flag `continuous`, `broken` or
 `could_not_be_established`. Validation recomputes those derived claims from the embedded sources. It
 has no operation permission result.
 
+For each validated shadow receipt, Reposkop can now emit a self-contained differential assessment:
+
+```text
+reposkop shadow-value --shadow shadow.json --json > shadow-value.json
+```
+
+The assessment compares only the four documented baseline fields and reports one of
+`unique_identity_signal`, `baseline_visible_change`, `no_identity_break` or `inconclusive`. Its
+validation recomputes the field deltas and classification from the embedded shadow observations.
+This closes the local measurement gap without importing consumer semantics: materiality, recovery
+improvement and wrong-checkout prevention remain external evidence.
+
 Aggregate only bounded, purpose-bound shadow receipts. Evaluate whether identity breaks were
 material, whether the simpler baseline would have missed them, and whether they improved recovery
 or prevented a wrong-checkout action. Ordinary HEAD/branch/common-dir drift is not unique value.
