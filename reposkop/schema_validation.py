@@ -140,14 +140,16 @@ def validate_artifact(value: dict[str, Any]) -> dict[str, Any]:
             expected_kind="reposkop_checkout_continuity",
         )
         transition = continuity.get("transition") if isinstance(continuity, dict) else None
-        if isinstance(continuity, dict):
-            if value.get("continuity_sha256") != continuity.get("continuity_sha256"):
-                rendered_errors.append(
-                    {
-                        "path": "continuity_sha256",
-                        "message": "shadow is not bound to embedded continuity",
-                    }
-                )
+        if (
+            isinstance(continuity, dict)
+            and value.get("continuity_sha256") != continuity.get("continuity_sha256")
+        ):
+            rendered_errors.append(
+                {
+                    "path": "continuity_sha256",
+                    "message": "shadow is not bound to embedded continuity",
+                }
+            )
         if isinstance(transition, dict):
             if value.get("transition_sha256") != transition.get("transition_sha256"):
                 rendered_errors.append(

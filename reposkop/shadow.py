@@ -6,6 +6,7 @@ from .canonical import sha256_json, valid_sha256_or_none
 from .timeutil import utc_now
 from .transition import build_continuity, build_transition
 
+
 def _identity_digest(observation: Any, field: str) -> str | None:
     if not isinstance(observation, dict):
         return None
