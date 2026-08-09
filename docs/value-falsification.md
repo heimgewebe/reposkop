@@ -39,7 +39,7 @@ claim falsifiable.
 | Modify a tracked file without changing checkout identity | No changed baseline field | `same_checkout`; dirty/status reason codes; no anomaly; continuity `explainable_drift` | Negative control: state drift must not be promoted to identity break |
 
 Every case asserts complete and schema-valid before/after observations, exact baseline field deltas,
-exact transition reason/anomaly codes, exact continuity state/reasons, and the compact shadow result.
+exact transition reason/anomaly codes, exact continuity state/reasons, and the self-contained shadow result.
 The test uses real temporary Git repositories and filesystem replacement/redirection; it does not
 mock Reposkop identity material.
 
@@ -54,10 +54,12 @@ reposkop inspect /path/to/checkout --purpose shadow --json > after.json
 reposkop shadow --before before.json --after after.json --json > shadow.json
 ```
 
-The shadow artifact contains canonical observation, repository-identity, checkout-identity,
-transition, continuity and shadow digests; continuity state; exact reason/anomaly codes; and only
-the tri-state local identity flag `continuous`, `broken` or `could_not_be_established`. It has no
-operation permission result.
+The shadow artifact embeds validated continuity evidence, which recursively carries the transition
+and both captured observations. It also exposes canonical observation, repository-identity,
+checkout-identity, transition, continuity and shadow digests; continuity state; exact reason/anomaly
+codes; and only the tri-state local identity flag `continuous`, `broken` or
+`could_not_be_established`. Validation recomputes those derived claims from the embedded sources. It
+has no operation permission result.
 
 Aggregate only bounded, purpose-bound shadow receipts. Evaluate whether identity breaks were
 material, whether the simpler baseline would have missed them, and whether they improved recovery

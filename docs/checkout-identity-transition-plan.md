@@ -16,7 +16,7 @@ Reposkop must not become a second task store, GitHub observer, effect engine or 
 - dirty-state digest and active Git operation markers;
 - checkout transition artifact with stable reason and anomaly codes;
 - checkout continuity classification;
-- compact operation-agnostic shadow transition summaries;
+- self-contained operation-agnostic shadow transition summaries with recomputable claims;
 - version-aware artifact validation;
 - CLI commands for transition and continuity;
 - removal of the legacy `steuerboard` package entrypoint from the distributed product.

@@ -32,6 +32,8 @@ def test_shadow_transition_emits_compact_canonical_identity_summary(git_repo):
     assert shadow["after_checkout_identity_sha256"] == after["identities"][
         "checkout_identity_sha256"
     ]
+    assert shadow["continuity"]["transition"]["before"] == before
+    assert shadow["continuity"]["transition"]["after"] == after
     assert shadow["identity_continuity"] == "same_checkout"
     assert shadow["continuity_state"] == "explainable_drift"
     assert shadow["local_identity_continuity"] == "continuous"
@@ -61,6 +63,85 @@ def test_shadow_transition_cannot_establish_identity_from_incomplete_observation
     assert shadow["reason_codes"] == ["evidence.after_incomplete"]
     assert shadow["anomaly_codes"] == ["evidence.after_incomplete"]
     assert validate_artifact(shadow)["valid"] is True
+
+
+
+def _rehash_artifact(artifact, digest_field):
+    artifact.pop(digest_field, None)
+    artifact[digest_field] = sha256_json(artifact)
+
+
+def test_shadow_transition_rejects_rehashed_derived_claim_tampering(git_repo):
+    before = observe_checkout(git_repo, purpose="shadow")
+    (git_repo / "file.txt").write_text("harmless drift\n", encoding="utf-8")
+    after = observe_checkout(git_repo, purpose="shadow")
+    shadow = build_shadow_transition(before, after)
+
+    shadow["continuity_state"] = "intact"
+    _rehash_artifact(shadow, "shadow_transition_sha256")
+
+    validation = validate_artifact(shadow)
+    assert validation["valid"] is False
+    assert any(error.get("path") == "continuity_state" for error in validation["errors"])
+
+
+def test_shadow_transition_rejects_rehashed_embedded_continuity_tampering(git_repo):
+    before = observe_checkout(git_repo, purpose="shadow")
+    (git_repo / "file.txt").write_text("harmless drift\n", encoding="utf-8")
+    after = observe_checkout(git_repo, purpose="shadow")
+    shadow = build_shadow_transition(before, after)
+
+    shadow["continuity"]["state"] = "intact"
+    _rehash_artifact(shadow["continuity"], "continuity_sha256")
+    shadow["continuity_sha256"] = shadow["continuity"]["continuity_sha256"]
+    _rehash_artifact(shadow, "shadow_transition_sha256")
+
+    validation = validate_artifact(shadow)
+    assert validation["valid"] is False
+    assert any(error.get("path") == "continuity" for error in validation["errors"])
+
+
+def test_shadow_transition_rejects_rehashed_invalid_transition_from_valid_sources(git_repo):
+    observation = observe_checkout(git_repo, purpose="shadow")
+    shadow = build_shadow_transition(observation, observation)
+    transition = shadow["continuity"]["transition"]
+    continuity = shadow["continuity"]
+
+    transition["identity_continuity"] = "different_repository"
+    _rehash_artifact(transition, "transition_sha256")
+    continuity["transition_sha256"] = transition["transition_sha256"]
+    continuity["transition_validation"] = validate_artifact(transition)
+    continuity["state"] = "inconclusive"
+    continuity["reason_codes"] = ["evidence.transition_invalid"]
+    _rehash_artifact(continuity, "continuity_sha256")
+    shadow["transition_sha256"] = transition["transition_sha256"]
+    shadow["continuity_sha256"] = continuity["continuity_sha256"]
+    shadow["continuity_state"] = "inconclusive"
+    shadow["reason_codes"] = ["evidence.transition_invalid"]
+    _rehash_artifact(shadow, "shadow_transition_sha256")
+
+    validation = validate_artifact(shadow)
+    assert validation["valid"] is False
+    assert any(
+        error.get("path") == "continuity/transition" for error in validation["errors"]
+    )
+
+
+
+def test_shadow_transition_rejects_rehashed_inconclusive_anomaly_tampering(git_repo):
+    before = observe_checkout(git_repo, purpose="shadow")
+    after = deepcopy(before)
+    after["observation_complete"] = False
+    after["errors"] = ["status_failed"]
+    after = _rehash_observation(after)
+    shadow = build_shadow_transition(before, after)
+
+    shadow["anomaly_codes"] = []
+    _rehash_artifact(shadow, "shadow_transition_sha256")
+
+    validation = validate_artifact(shadow)
+    assert validation["valid"] is False
+    assert any(error.get("path") == "anomaly_codes" for error in validation["errors"])
 
 
 def test_shadow_transition_rejects_rehashed_inconsistent_identity_flag(git_repo):

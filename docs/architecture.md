@@ -69,10 +69,11 @@ Continuity is derived only from a validated transition:
 
 ### Shadow transition v1
 
-The shadow artifact is a compact, operation-agnostic reference summary derived from two captured
-observations. It exposes canonical source/transition/continuity digests, continuity state,
-reason/anomaly codes and a tri-state local identity result. It does not contain an operation
-permission decision.
+The shadow artifact is a self-contained, operation-agnostic summary derived from two captured
+observations. It embeds validated continuity evidence, which recursively carries the transition and
+source observations, and exposes canonical source/transition/continuity digests, continuity state,
+reason/anomaly codes and a tri-state local identity result. Validation recomputes the derived claims
+from those embedded sources. It does not contain an operation permission decision.
 
 ### Coherence projection v2
 

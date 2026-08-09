@@ -11,6 +11,7 @@
     "kind",
     "generated_at",
     "authority",
+    "continuity",
     "before_observation_sha256",
     "after_observation_sha256",
     "before_repository_identity_sha256",
@@ -43,6 +44,15 @@
         "claim": {"const": "canonical"}
       },
       "additionalProperties": false
+    },
+    "continuity": {
+      "type": "object",
+      "required": ["schema_version", "kind", "continuity_sha256"],
+      "properties": {
+        "schema_version": {"const": 1},
+        "kind": {"const": "reposkop_checkout_continuity"},
+        "continuity_sha256": {"$ref": "#/$defs/sha256"}
+      }
     },
     "before_observation_sha256": {"$ref": "#/$defs/nullableSha256"},
     "after_observation_sha256": {"$ref": "#/$defs/nullableSha256"},

@@ -17,3 +17,9 @@ def canonical_bytes(value: Any) -> bytes:
 
 def sha256_json(value: Any) -> str:
     return hashlib.sha256(canonical_bytes(value)).hexdigest()
+
+
+def valid_sha256_or_none(value: Any) -> str | None:
+    if not isinstance(value, str) or len(value) != 64:
+        return None
+    return value if all(char in "0123456789abcdef" for char in value) else None

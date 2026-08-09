@@ -1,34 +1,28 @@
 from __future__ import annotations
 
-import re
 from typing import Any
 
-from .canonical import sha256_json
+from .canonical import sha256_json, valid_sha256_or_none
 from .timeutil import utc_now
 from .transition import build_continuity, build_transition
-
-_SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
-
 
 def _identity_digest(observation: Any, field: str) -> str | None:
     if not isinstance(observation, dict):
         return None
-    value = observation.get("identities", {}).get(field)
-    return value if isinstance(value, str) and _SHA256_RE.fullmatch(value) else None
+    return valid_sha256_or_none(observation.get("identities", {}).get(field))
 
 
 def _observation_digest(observation: Any) -> str | None:
     if not isinstance(observation, dict):
         return None
-    value = observation.get("observation_sha256")
-    return value if isinstance(value, str) and _SHA256_RE.fullmatch(value) else None
+    return valid_sha256_or_none(observation.get("observation_sha256"))
 
 
 def build_shadow_transition(
     before: dict[str, Any],
     after: dict[str, Any],
 ) -> dict[str, Any]:
-    """Build a compact, operation-agnostic summary of two checkout observations."""
+    """Build a self-contained, operation-agnostic summary of two checkout observations."""
     transition = build_transition(before, after)
     continuity = build_continuity(transition)
     identity_continuity = transition["identity_continuity"]
@@ -48,6 +42,7 @@ def build_shadow_transition(
             "domain": "local_checkout_identity_shadow",
             "claim": "canonical",
         },
+        "continuity": continuity,
         "before_observation_sha256": _observation_digest(before),
         "after_observation_sha256": _observation_digest(after),
         "before_repository_identity_sha256": _identity_digest(

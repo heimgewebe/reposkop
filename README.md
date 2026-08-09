@@ -68,8 +68,9 @@ Continuity classifies a transition as:
 
 ### Shadow transition v1
 
-A compact shadow transition references separately captured before/after observations and the
-derived transition and continuity digests. Its `local_identity_continuity` result is only
+A self-contained shadow transition embeds validated continuity evidence (including its transition
+and captured before/after observations) and exposes their canonical digests. Its
+`local_identity_continuity` result is only
 `continuous`, `broken` or `could_not_be_established`; it never decides whether an operation was
 allowed.
 

@@ -7,7 +7,7 @@ from typing import Any
 
 from jsonschema import Draft202012Validator
 
-from .canonical import sha256_json
+from .canonical import sha256_json, valid_sha256_or_none
 from .timeutil import parse_utc
 from .transition_claims import derive_continuity_claims, derive_transition_claims
 
@@ -132,76 +132,100 @@ def validate_artifact(value: dict[str, Any]) -> dict[str, Any]:
             rendered_errors.append({"path": field, "message": "timestamp is not normalized UTC"})
 
     if kind == "reposkop_shadow_transition":
-        identity_continuity = value.get("identity_continuity")
-        expected_local_identity = {
-            "same_checkout": "continuous",
-            "same_repository_different_checkout": "broken",
-            "different_repository": "broken",
-            "inconclusive": "could_not_be_established",
-        }.get(identity_continuity)
-        if value.get("local_identity_continuity") != expected_local_identity:
-            rendered_errors.append(
-                {
-                    "path": "local_identity_continuity",
-                    "message": "local identity flag is inconsistent with identity continuity",
-                }
+        continuity = value.get("continuity")
+        _nested_validation_error(
+            rendered_errors,
+            path="continuity",
+            value=continuity,
+            expected_kind="reposkop_checkout_continuity",
+        )
+        transition = continuity.get("transition") if isinstance(continuity, dict) else None
+        if isinstance(continuity, dict):
+            if value.get("continuity_sha256") != continuity.get("continuity_sha256"):
+                rendered_errors.append(
+                    {
+                        "path": "continuity_sha256",
+                        "message": "shadow is not bound to embedded continuity",
+                    }
+                )
+        if isinstance(transition, dict):
+            if value.get("transition_sha256") != transition.get("transition_sha256"):
+                rendered_errors.append(
+                    {
+                        "path": "transition_sha256",
+                        "message": "shadow is not bound to embedded transition",
+                    }
+                )
+            before = transition.get("before")
+            after = transition.get("after")
+            before_validation = (
+                validate_artifact(before) if isinstance(before, dict) else {"valid": False}
             )
-        allowed_continuity_states = {
-            "same_checkout": {"intact", "explainable_drift"},
-            "same_repository_different_checkout": {"identity_break"},
-            "different_repository": {"identity_break"},
-            "inconclusive": {"inconclusive"},
-        }.get(identity_continuity, set())
-        if value.get("continuity_state") not in allowed_continuity_states:
-            rendered_errors.append(
-                {
-                    "path": "continuity_state",
-                    "message": "continuity state is inconsistent with identity continuity",
-                }
+            after_validation = (
+                validate_artifact(after) if isinstance(after, dict) else {"valid": False}
             )
-        before_checkout = value.get("before_checkout_identity_sha256")
-        after_checkout = value.get("after_checkout_identity_sha256")
-        before_repository = value.get("before_repository_identity_sha256")
-        after_repository = value.get("after_repository_identity_sha256")
-        identity_digest_consistent = {
-            "same_checkout": bool(before_checkout and before_checkout == after_checkout),
-            "same_repository_different_checkout": bool(
-                before_checkout
-                and after_checkout
-                and before_checkout != after_checkout
-                and before_repository
-                and before_repository == after_repository
-            ),
-            "different_repository": bool(
-                before_checkout
-                and after_checkout
-                and before_checkout != after_checkout
-                and before_repository
-                and after_repository
-                and before_repository != after_repository
-            ),
-            "inconclusive": True,
-        }.get(identity_continuity, False)
-        if not identity_digest_consistent:
-            rendered_errors.append(
-                {
-                    "path": "identity_continuity",
-                    "message": "identity continuity is inconsistent with referenced digests",
-                }
+            expected_transition_claims = derive_transition_claims(
+                before,
+                after,
+                before_valid=before_validation.get("valid") is True,
+                after_valid=after_validation.get("valid") is True,
             )
-        expected_anomaly_codes = {
-            "same_checkout": [],
-            "same_repository_different_checkout": ["identity.checkout_break"],
-            "different_repository": [
-                "identity.checkout_break",
-                "identity.repository_break",
-            ],
-        }.get(identity_continuity)
-        if expected_anomaly_codes is not None and value.get("anomaly_codes") != expected_anomaly_codes:
+            transition_validation = validate_artifact(transition)
+            if (
+                before_validation.get("valid") is True
+                and after_validation.get("valid") is True
+                and transition_validation.get("valid") is not True
+            ):
+                rendered_errors.append(
+                    {
+                        "path": "continuity/transition",
+                        "message": "transition is invalid despite valid embedded observations",
+                    }
+                )
+            expected_continuity_claims = derive_continuity_claims(
+                transition,
+                transition_valid=transition_validation.get("valid") is True,
+            )
+            identity_continuity = expected_transition_claims["identity_continuity"]
+            expected_local_identity = {
+                "same_checkout": "continuous",
+                "same_repository_different_checkout": "broken",
+                "different_repository": "broken",
+                "inconclusive": "could_not_be_established",
+            }[identity_continuity]
+            before_identities = before.get("identities", {}) if isinstance(before, dict) else {}
+            after_identities = after.get("identities", {}) if isinstance(after, dict) else {}
+            expected_shadow_claims = {
+                "before_observation_sha256": valid_sha256_or_none(
+                    before.get("observation_sha256") if isinstance(before, dict) else None
+                ),
+                "after_observation_sha256": valid_sha256_or_none(
+                    after.get("observation_sha256") if isinstance(after, dict) else None
+                ),
+                "before_repository_identity_sha256": valid_sha256_or_none(
+                    before_identities.get("repository_identity_sha256")
+                ),
+                "after_repository_identity_sha256": valid_sha256_or_none(
+                    after_identities.get("repository_identity_sha256")
+                ),
+                "before_checkout_identity_sha256": valid_sha256_or_none(
+                    before_identities.get("checkout_identity_sha256")
+                ),
+                "after_checkout_identity_sha256": valid_sha256_or_none(
+                    after_identities.get("checkout_identity_sha256")
+                ),
+                "identity_continuity": identity_continuity,
+                "continuity_state": expected_continuity_claims["state"],
+                "local_identity_continuity": expected_local_identity,
+                "reason_codes": expected_continuity_claims["reason_codes"],
+                "anomaly_codes": expected_transition_claims["anomaly_codes"],
+            }
+            _claim_mismatch_errors(rendered_errors, value, expected_shadow_claims)
+        else:
             rendered_errors.append(
                 {
-                    "path": "anomaly_codes",
-                    "message": "anomaly codes are inconsistent with identity continuity",
+                    "path": "continuity/transition",
+                    "message": "embedded continuity does not contain a transition",
                 }
             )
 
