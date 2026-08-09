@@ -18,7 +18,7 @@ def build_report(
 ) -> dict[str, Any]:
     observation = observe_checkout(raw_path, explicit_role=explicit_role, purpose=purpose)
     report: dict[str, Any] = {
-        "schema_version": 2,
+        "schema_version": 3,
         "kind": "reposkop_coherence_report",
         "generated_at": utc_now(),
         "observation": observation,

@@ -45,6 +45,7 @@ def project_coherence(
     lifecycle_evidence: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     reasons: list[str] = []
+    foreign_authority_gaps: list[str] = []
     role = observation.get("role", {}).get("value", "unknown")
     dirty = observation.get("git", {}).get("dirty") is True
     observation_complete = observation.get("observation_complete") is True
@@ -52,8 +53,6 @@ def project_coherence(
     state = ProjectionState.INCONCLUSIVE.value
     evidence_validation: dict[str, Any] | None = None
     active_bindings: list[str] = []
-    evidence_matches = False
-    lifecycle: dict[str, Any] = {}
 
     if lifecycle_evidence is not None:
         evidence_validation = validate_lifecycle_evidence(lifecycle_evidence)
@@ -61,51 +60,36 @@ def project_coherence(
             evidence_matches, mismatches = subject_matches(observation, lifecycle_evidence)
             if evidence_matches:
                 active_bindings = _active_bindings(lifecycle_evidence)
-                lifecycle = lifecycle_evidence.get("lifecycle", {})
+                if evidence_validation["freshness"] != "fresh":
+                    foreign_authority_gaps.append("lifecycle_evidence_stale")
             else:
-                reasons.extend(f"subject_mismatch:{value}" for value in mismatches)
+                foreign_authority_gaps.extend(
+                    f"lifecycle_subject_mismatch:{value}" for value in mismatches
+                )
         else:
-            reasons.append("lifecycle_evidence_invalid")
+            foreign_authority_gaps.append("lifecycle_evidence_invalid")
+    else:
+        foreign_authority_gaps.append("lifecycle_evidence_missing")
 
     if not observation_validation["valid"]:
-        reasons.insert(0, "observation_invalid")
-    elif role in MANAGED_ROLES:
-        state = ProjectionState.MANAGED_RETAIN.value
-        reasons.insert(0, f"managed_role:{role}")
-    elif dirty:
-        state = ProjectionState.DIRTY_PRESERVE.value
-        reasons.insert(0, "git_dirty")
+        reasons.append("observation_invalid")
     elif not observation.get("is_git_checkout") or not observation_complete:
-        reasons.insert(0, "git_observation_incomplete")
-    elif active_bindings and evidence_matches:
-        state = ProjectionState.PROTECTED_ACTIVE.value
-        reasons.insert(0, "active_bindings")
-        if evidence_validation and evidence_validation["freshness"] != "fresh":
-            reasons.append("active_bindings_from_stale_evidence")
-    elif lifecycle_evidence is None:
-        reasons.append("lifecycle_evidence_missing")
-    elif evidence_validation and evidence_validation["valid"] and evidence_matches:
-        status = lifecycle.get("status")
-        if evidence_validation["freshness"] != "fresh":
-            reasons.append("lifecycle_evidence_stale")
-        elif lifecycle.get("archive_required") is True or lifecycle.get("unique_commits") is True:
-            state = ProjectionState.ARCHIVE_THEN_REMOVE.value
-            reasons.append("recovery_binding_required")
-        elif status in {"auto_archive_candidate", "archive_candidate"}:
-            state = ProjectionState.ARCHIVE_THEN_REMOVE.value
-            reasons.append(f"lifecycle:{status}")
-        elif status in {"cleanup_candidate", "remove_candidate"}:
-            state = ProjectionState.REMOVE_CANDIDATE.value
-            reasons.append(f"lifecycle:{status}")
-        else:
-            reasons.append(f"unsupported_or_unready_lifecycle:{status}")
+        reasons.append("git_observation_incomplete")
+    else:
+        state = ProjectionState.LOCAL_COHERENT.value
+        reasons.append("local_checkout_observation_complete")
+        if role in MANAGED_ROLES:
+            reasons.append(f"managed_role:{role}")
+        if dirty:
+            reasons.append("git_dirty")
 
     projection: dict[str, Any] = {
-        "schema_version": 1,
+        "schema_version": 2,
         "kind": "reposkop_coherence_projection",
         "state": state,
         "reasons": list(dict.fromkeys(reasons)),
         "active_bindings": active_bindings,
+        "foreign_authority_gaps": list(dict.fromkeys(foreign_authority_gaps)),
         "observation_sha256": observation.get("observation_sha256"),
         "observation_validation": observation_validation,
         "evidence_validation": evidence_validation,

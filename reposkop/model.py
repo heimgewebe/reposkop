@@ -16,6 +16,7 @@ class CheckoutRole(str, Enum):
 
 
 class ProjectionState(str, Enum):
+    LOCAL_COHERENT = "local_coherent"
     MANAGED_RETAIN = "managed_retain"
     PROTECTED_ACTIVE = "protected_active"
     DIRTY_PRESERVE = "dirty_preserve"

@@ -16,10 +16,13 @@ _SCHEMA_BY_KIND_VERSION = {
     ("reposkop_checkout_observation", 2): "checkout-observation.v2.schema.json",
     ("reposkop_checkout_transition", 1): "checkout-transition.v1.schema.json",
     ("reposkop_checkout_continuity", 1): "checkout-continuity.v1.schema.json",
+    ("reposkop_shadow_transition", 1): "shadow-transition.v1.schema.json",
     ("reposkop_lifecycle_evidence", 1): "lifecycle-evidence.v1.schema.json",
     ("reposkop_coherence_projection", 1): "coherence-projection.v1.schema.json",
+    ("reposkop_coherence_projection", 2): "coherence-projection.v2.schema.json",
     ("reposkop_coherence_report", 1): "coherence-report.v1.schema.json",
     ("reposkop_coherence_report", 2): "coherence-report.v2.schema.json",
+    ("reposkop_coherence_report", 3): "coherence-report.v3.schema.json",
     ("reposkop_inventory_config", 1): "inventory-config.v1.schema.json",
     ("reposkop_explicit_inventory", 1): "explicit-inventory.v1.schema.json",
 }
@@ -27,6 +30,7 @@ _DIGEST_BY_KIND = {
     "reposkop_checkout_observation": "observation_sha256",
     "reposkop_checkout_transition": "transition_sha256",
     "reposkop_checkout_continuity": "continuity_sha256",
+    "reposkop_shadow_transition": "shadow_transition_sha256",
     "reposkop_coherence_projection": "projection_sha256",
     "reposkop_coherence_report": "report_sha256",
     "reposkop_explicit_inventory": "inventory_sha256",
@@ -117,6 +121,7 @@ def validate_artifact(value: dict[str, Any]) -> dict[str, Any]:
         "reposkop_checkout_observation": ("observed_at",),
         "reposkop_checkout_transition": ("generated_at",),
         "reposkop_checkout_continuity": ("generated_at",),
+        "reposkop_shadow_transition": ("generated_at",),
         "reposkop_coherence_report": ("generated_at",),
         "reposkop_explicit_inventory": ("generated_at",),
     }.get(kind, ())
@@ -125,6 +130,80 @@ def validate_artifact(value: dict[str, Any]) -> dict[str, Any]:
             parse_utc(value.get(field))
         except (TypeError, ValueError):
             rendered_errors.append({"path": field, "message": "timestamp is not normalized UTC"})
+
+    if kind == "reposkop_shadow_transition":
+        identity_continuity = value.get("identity_continuity")
+        expected_local_identity = {
+            "same_checkout": "continuous",
+            "same_repository_different_checkout": "broken",
+            "different_repository": "broken",
+            "inconclusive": "could_not_be_established",
+        }.get(identity_continuity)
+        if value.get("local_identity_continuity") != expected_local_identity:
+            rendered_errors.append(
+                {
+                    "path": "local_identity_continuity",
+                    "message": "local identity flag is inconsistent with identity continuity",
+                }
+            )
+        allowed_continuity_states = {
+            "same_checkout": {"intact", "explainable_drift"},
+            "same_repository_different_checkout": {"identity_break"},
+            "different_repository": {"identity_break"},
+            "inconclusive": {"inconclusive"},
+        }.get(identity_continuity, set())
+        if value.get("continuity_state") not in allowed_continuity_states:
+            rendered_errors.append(
+                {
+                    "path": "continuity_state",
+                    "message": "continuity state is inconsistent with identity continuity",
+                }
+            )
+        before_checkout = value.get("before_checkout_identity_sha256")
+        after_checkout = value.get("after_checkout_identity_sha256")
+        before_repository = value.get("before_repository_identity_sha256")
+        after_repository = value.get("after_repository_identity_sha256")
+        identity_digest_consistent = {
+            "same_checkout": bool(before_checkout and before_checkout == after_checkout),
+            "same_repository_different_checkout": bool(
+                before_checkout
+                and after_checkout
+                and before_checkout != after_checkout
+                and before_repository
+                and before_repository == after_repository
+            ),
+            "different_repository": bool(
+                before_checkout
+                and after_checkout
+                and before_checkout != after_checkout
+                and before_repository
+                and after_repository
+                and before_repository != after_repository
+            ),
+            "inconclusive": True,
+        }.get(identity_continuity, False)
+        if not identity_digest_consistent:
+            rendered_errors.append(
+                {
+                    "path": "identity_continuity",
+                    "message": "identity continuity is inconsistent with referenced digests",
+                }
+            )
+        expected_anomaly_codes = {
+            "same_checkout": [],
+            "same_repository_different_checkout": ["identity.checkout_break"],
+            "different_repository": [
+                "identity.checkout_break",
+                "identity.repository_break",
+            ],
+        }.get(identity_continuity)
+        if expected_anomaly_codes is not None and value.get("anomaly_codes") != expected_anomaly_codes:
+            rendered_errors.append(
+                {
+                    "path": "anomaly_codes",
+                    "message": "anomaly codes are inconsistent with identity continuity",
+                }
+            )
 
     if kind == "reposkop_coherence_report":
         observation = value.get("observation")

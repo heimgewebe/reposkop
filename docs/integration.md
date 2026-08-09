@@ -16,6 +16,11 @@ Required sequence:
 
 Grabowski must still independently read task, lease, process, GitHub and effect authority. Reposkop does not grant permission to mutate.
 
+For measurement without operation semantics, any consumer may capture two purpose-bound
+observations and derive a compact `reposkop shadow --before ... --after ... --json` artifact. The
+tri-state result reports only local checkout identity continuity and must not be treated as effect
+permission.
+
 ## Bureau
 
 Bureau may bind Reposkop digest references into repository-scoped task evidence. It remains authoritative for task, claim, queue and completion truth and must not infer completion from checkout continuity.

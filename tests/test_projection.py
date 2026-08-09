@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 from reposkop.canonical import sha256_json
 from reposkop.observation import observe_checkout
 from reposkop.projection import project_coherence
+from reposkop.schema_validation import validate_artifact
 
 
 def evidence_for(observation, *, status="cleanup_candidate", bindings=None, archive=False):
@@ -43,14 +44,18 @@ def evidence_for(observation, *, status="cleanup_candidate", bindings=None, arch
     }
 
 
-def test_clean_candidate_is_only_projection(git_repo):
+def test_clean_candidate_foreign_status_does_not_set_local_posture(git_repo):
     observation = observe_checkout(git_repo, explicit_role="linked_worktree")
     result = project_coherence(observation, evidence_for(observation))
-    assert result["state"] == "remove_candidate"
+    assert result["state"] == "local_coherent"
+    assert result["reasons"] == ["local_checkout_observation_complete"]
+    assert result["foreign_authority_gaps"] == []
     assert result["effect_authorized"] is False
+    assert result["schema_version"] == 2
+    assert validate_artifact(result)["valid"] is True
 
 
-def test_active_lease_protects(git_repo):
+def test_active_lease_is_descriptive_foreign_evidence_only(git_repo):
     observation = observe_checkout(git_repo, explicit_role="linked_worktree")
     bindings = {
         "tasks": [],
@@ -60,32 +65,38 @@ def test_active_lease_protects(git_repo):
         "pull_requests": [],
     }
     result = project_coherence(observation, evidence_for(observation, bindings=bindings))
-    assert result["state"] == "protected_active"
+    assert result["state"] == "local_coherent"
+    assert result["active_bindings"] == ["lease:path:x"]
+    assert result["foreign_authority_gaps"] == []
 
 
-def test_dirty_state_wins_even_without_evidence(git_repo):
+def test_dirty_state_is_descriptive_and_missing_lifecycle_is_separate(git_repo):
     (git_repo / "file.txt").write_text("changed\n", encoding="utf-8")
     observation = observe_checkout(git_repo)
     result = project_coherence(observation)
-    assert result["state"] == "dirty_preserve"
+    assert result["state"] == "local_coherent"
+    assert result["reasons"] == ["local_checkout_observation_complete", "git_dirty"]
+    assert result["foreign_authority_gaps"] == ["lifecycle_evidence_missing"]
 
 
-def test_subject_mismatch_is_inconclusive(git_repo):
+def test_subject_mismatch_is_a_foreign_gap_not_local_inconclusive(git_repo):
     observation = observe_checkout(git_repo, explicit_role="linked_worktree")
     evidence = evidence_for(observation)
     evidence["subject"]["head"] = "0" * 40
     result = project_coherence(observation, evidence)
-    assert result["state"] == "inconclusive"
-    assert "subject_mismatch:head" in result["reasons"]
+    assert result["state"] == "local_coherent"
+    assert result["reasons"] == ["local_checkout_observation_complete"]
+    assert result["foreign_authority_gaps"] == ["lifecycle_subject_mismatch:head"]
 
 
-def test_archive_requirement_precedes_cleanup(git_repo):
+def test_archive_requirement_does_not_become_reposkop_local_posture(git_repo):
     observation = observe_checkout(git_repo, explicit_role="linked_worktree")
     result = project_coherence(observation, evidence_for(observation, archive=True))
-    assert result["state"] == "archive_then_remove"
+    assert result["state"] == "local_coherent"
+    assert result["foreign_authority_gaps"] == []
 
 
-def test_incomplete_observation_cannot_become_remove_candidate(git_repo):
+def test_incomplete_observation_remains_locally_inconclusive(git_repo):
     observation = observe_checkout(git_repo, explicit_role="linked_worktree")
     observation["observation_complete"] = False
     observation["observation_sha256"] = sha256_json(
@@ -96,7 +107,7 @@ def test_incomplete_observation_cannot_become_remove_candidate(git_repo):
     assert result["reasons"] == ["git_observation_incomplete"]
 
 
-def test_stale_matching_active_binding_remains_protected(git_repo):
+def test_stale_matching_active_binding_is_descriptive_foreign_evidence(git_repo):
     observation = observe_checkout(git_repo, explicit_role="linked_worktree")
     bindings = {
         "tasks": [{"id": "T1", "state": "running"}],
@@ -110,11 +121,12 @@ def test_stale_matching_active_binding_remains_protected(git_repo):
     evidence["expires_at"] = "2026-07-24T05:02:00Z"
     evidence["sources"][0]["observed_at"] = "2026-07-24T05:00:00Z"
     result = project_coherence(observation, evidence)
-    assert result["state"] == "protected_active"
-    assert "active_bindings_from_stale_evidence" in result["reasons"]
+    assert result["state"] == "local_coherent"
+    assert result["active_bindings"] == ["task:T1"]
+    assert result["foreign_authority_gaps"] == ["lifecycle_evidence_stale"]
 
 
-def test_rewrapped_old_source_cannot_project_cleanup(git_repo):
+def test_rewrapped_old_source_is_foreign_gap_not_local_inconclusive(git_repo):
     observation = observe_checkout(git_repo, explicit_role="linked_worktree")
     evidence = evidence_for(observation)
     captured = datetime.fromisoformat(evidence["captured_at"].replace("Z", "+00:00"))
@@ -122,21 +134,21 @@ def test_rewrapped_old_source_cannot_project_cleanup(git_repo):
         "+00:00", "Z"
     )
     result = project_coherence(observation, evidence)
-    assert result["state"] == "inconclusive"
-    assert "lifecycle_evidence_invalid" in result["reasons"]
+    assert result["state"] == "local_coherent"
+    assert result["foreign_authority_gaps"] == ["lifecycle_evidence_invalid"]
     assert "sources[0].observed_too_old" in result["evidence_validation"]["errors"]
 
 
-def test_partial_binding_shape_is_inconclusive(git_repo):
+def test_partial_binding_shape_is_foreign_gap(git_repo):
     observation = observe_checkout(git_repo, explicit_role="linked_worktree")
     evidence = evidence_for(observation)
     evidence["bindings"]["leases"] = [{"resource_key": "path:x"}]
     result = project_coherence(observation, evidence)
-    assert result["state"] == "inconclusive"
-    assert "lifecycle_evidence_invalid" in result["reasons"]
+    assert result["state"] == "local_coherent"
+    assert result["foreign_authority_gaps"] == ["lifecycle_evidence_invalid"]
 
 
-def test_excessive_evidence_ttl_is_inconclusive(git_repo):
+def test_excessive_evidence_ttl_is_foreign_gap(git_repo):
     observation = observe_checkout(git_repo, explicit_role="linked_worktree")
     evidence = evidence_for(observation)
     captured = datetime.now(timezone.utc).replace(microsecond=0) - timedelta(seconds=1)
@@ -146,7 +158,8 @@ def test_excessive_evidence_ttl_is_inconclusive(git_repo):
     )
     evidence["sources"][0]["observed_at"] = evidence["captured_at"]
     result = project_coherence(observation, evidence)
-    assert result["state"] == "inconclusive"
+    assert result["state"] == "local_coherent"
+    assert result["foreign_authority_gaps"] == ["lifecycle_evidence_invalid"]
     assert "evidence_ttl_exceeds_5_minutes" in result["evidence_validation"]["errors"]
 
 
@@ -159,10 +172,25 @@ def test_forged_observation_digest_cannot_project_cleanup(git_repo):
     assert result["reasons"][0] == "observation_invalid"
 
 
-def test_arbitrary_source_cannot_claim_lifecycle_authority(git_repo):
+def test_arbitrary_source_authority_failure_is_foreign_gap(git_repo):
     observation = observe_checkout(git_repo, explicit_role="linked_worktree")
     evidence = evidence_for(observation)
     evidence["sources"][0]["authority"] = "github"
     result = project_coherence(observation, evidence)
-    assert result["state"] == "inconclusive"
+    assert result["state"] == "local_coherent"
+    assert result["foreign_authority_gaps"] == ["lifecycle_evidence_invalid"]
     assert "lifecycle_authority_missing" in result["evidence_validation"]["errors"]
+
+
+def test_unbound_upstream_and_unverified_remote_freshness_are_not_local_risks(git_repo):
+    observation = observe_checkout(git_repo, explicit_role="linked_worktree")
+    assert observation["git"]["upstream"] is None
+    assert observation["git"]["upstream_freshness"] == "locally_available_only"
+
+    result = project_coherence(observation)
+
+    assert result["state"] == "local_coherent"
+    assert result["reasons"] == ["local_checkout_observation_complete"]
+    assert result["foreign_authority_gaps"] == ["lifecycle_evidence_missing"]
+    assert "upstream_unbound" not in str(result)
+    assert "upstream_freshness_unverified" not in str(result)

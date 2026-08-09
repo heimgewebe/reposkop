@@ -12,6 +12,7 @@ from .observation import observe_checkout
 from .projection import project_coherence
 from .report import build_report
 from .schema_validation import validate_artifact
+from .shadow import build_shadow_transition
 from .transition import observe_continuity, observe_transition
 
 
@@ -49,6 +50,14 @@ def build_parser() -> argparse.ArgumentParser:
     continuity.add_argument("--role", choices=ROLE_VALUES)
     continuity.add_argument("--purpose")
     continuity.add_argument("--json", action="store_true", required=True)
+
+    shadow = sub.add_parser(
+        "shadow",
+        help="summarize two captured observations without operation semantics",
+    )
+    shadow.add_argument("--before", required=True)
+    shadow.add_argument("--after", required=True)
+    shadow.add_argument("--json", action="store_true", required=True)
 
     report = sub.add_parser("report", help="build one source-bound coherence report")
     report.add_argument("path")
@@ -95,6 +104,8 @@ def main(argv: list[str] | None = None) -> int:
                     purpose=args.purpose,
                 )
             )
+        elif args.command == "shadow":
+            _emit(build_shadow_transition(load_json(args.before), load_json(args.after)))
         elif args.command == "report":
             evidence = load_json(args.lifecycle_evidence) if args.lifecycle_evidence else None
             _emit(

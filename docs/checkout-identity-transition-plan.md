@@ -16,6 +16,7 @@ Reposkop must not become a second task store, GitHub observer, effect engine or 
 - dirty-state digest and active Git operation markers;
 - checkout transition artifact with stable reason and anomaly codes;
 - checkout continuity classification;
+- compact operation-agnostic shadow transition summaries;
 - version-aware artifact validation;
 - CLI commands for transition and continuity;
 - removal of the legacy `steuerboard` package entrypoint from the distributed product.
@@ -91,6 +92,11 @@ Consumers should emit bounded local usage receipts containing:
 - whether the operation was replanned or rejected.
 
 After sufficient real usage, mandatory integration points should be retained only where they demonstrably detect drift, improve recovery or prevent identity mistakes.
+
+Synthetic differential tests are necessary but insufficient. If targeted identity substitution
+and real shadow transitions do not produce material cases uniquely detected beyond ordinary
+path/branch/HEAD/common-dir-path guards, consider library migration into Grabowski or retirement;
+do not expand Reposkop's authority to manufacture a justification.
 
 ## Deferred extensions
 
