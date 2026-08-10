@@ -25,7 +25,9 @@ smoke:
 	$(PYTHON) -m reposkop inspect "$$tmp" --purpose smoke --json > "$$tmp/after.json"; \
 	$(PYTHON) -m reposkop shadow --before "$$tmp/before.json" --after "$$tmp/after.json" --json > "$$tmp/shadow.json"; \
 	$(PYTHON) -m json.tool < "$$tmp/shadow.json" >/dev/null; \
-	$(PYTHON) -m reposkop shadow-value --shadow "$$tmp/shadow.json" --json | $(PYTHON) -m json.tool >/dev/null; \
+	$(PYTHON) -m reposkop shadow-value --shadow "$$tmp/shadow.json" --json > "$$tmp/shadow-value.json"; \
+	$(PYTHON) -m reposkop shadow-value-set --purpose smoke --assessment "$$tmp/shadow-value.json" --json > "$$tmp/shadow-value-set.json"; \
+	$(PYTHON) -m reposkop validate "$$tmp/shadow-value-set.json" --json | $(PYTHON) -m json.tool >/dev/null; \
 	$(PYTHON) -m reposkop report "$$tmp" --purpose smoke --json | $(PYTHON) -m json.tool >/dev/null; \
 	$(PYTHON) -m reposkop transition "$$tmp" --before "$$tmp/before.json" --purpose smoke --json | $(PYTHON) -m json.tool >/dev/null; \
 	$(PYTHON) -m reposkop continuity "$$tmp" --expected "$$tmp/before.json" --purpose smoke --json | $(PYTHON) -m json.tool >/dev/null; \

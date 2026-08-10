@@ -7,6 +7,8 @@ Reposkop exposes only target-bound, deterministic, read-only repository and chec
 ```text
 python -m reposkop inspect <path> --json
 python -m reposkop shadow --before <observation.json> --after <observation.json> --json
+python -m reposkop shadow-value --shadow <shadow.json> --json
+python -m reposkop shadow-value-set --purpose <purpose> --assessment <assessment.json> [--assessment <assessment.json> ...] --json
 python -m reposkop report <path> --json
 python -m reposkop project <observation.json> --json
 python -m reposkop inventory --config <explicit-targets.json> --json
@@ -17,7 +19,11 @@ python -m reposkop validate <artifact.json> --json
 
 `shadow` summarizes two separately captured observations. It reports only whether local checkout
 identity stayed continuous, broke or could not be established; it does not evaluate operation
-intent or permission.
+intent or permission. `shadow-value` classifies one validated shadow transition against the
+non-authoritative four-field baseline. `shadow-value-set` accepts only an explicit list of 1..128
+validated assessments with the same exact purpose, rejects duplicate digests, canonicalizes their
+order and summarizes only Reposkop's four local differential classifications plus the observation
+window. It does not establish materiality, evidence sufficiency or a retention decision.
 
 ## Authority boundary
 
