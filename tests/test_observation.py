@@ -275,3 +275,189 @@ def test_subdirectory_observation_uses_repository_toplevel(git_repo):
     assert result["observation_complete"] is True
     assert result["target"]["path"] == str(nested.resolve())
     assert result["identities"]["path"] == str(git_repo.resolve())
+
+
+def test_branch_state_probe_is_batched_on_normal_checkout(git_repo, monkeypatch):
+    import reposkop.observation as module
+
+    real_run = module.subprocess.run
+    calls = []
+
+    def traced_run(*args, **kwargs):
+        calls.append(args[0])
+        return real_run(*args, **kwargs)
+
+    monkeypatch.setattr(module.subprocess, "run", traced_run)
+    result = module.observe_checkout(git_repo)
+
+    assert result["observation_complete"] is True
+    assert sum(
+        argv[-6:] == ["status", "--porcelain=v2", "--branch", "--ahead-behind", "-z", "--untracked-files=no"]
+        for argv in calls
+    ) == 1
+    assert not any(argv[-2:] == ["rev-parse", "HEAD"] for argv in calls)
+    assert not any(argv[-4:] == ["symbolic-ref", "--quiet", "--short", "HEAD"] for argv in calls)
+    assert not any(
+        argv[-4:] == ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"]
+        for argv in calls
+    )
+    assert not any(
+        argv[-4:] == ["rev-list", "--left-right", "--count", "HEAD...@{upstream}"]
+        for argv in calls
+    )
+    assert len(calls) == 4
+
+
+def test_branch_state_batch_preserves_porcelain_v1_status_digest(git_repo):
+    import hashlib
+    import subprocess
+
+    (git_repo / "new.txt").write_text("new\n", encoding="utf-8")
+    expected = subprocess.run(
+        [
+            "git",
+            "-C",
+            str(git_repo),
+            "status",
+            "--porcelain=v1",
+            "-z",
+            "--untracked-files=normal",
+        ],
+        check=True,
+        capture_output=True,
+    ).stdout
+
+    result = observe_checkout(git_repo)
+
+    assert result["git"]["status_sha256"] == hashlib.sha256(expected).hexdigest()
+    assert result["git"]["untracked"] is True
+
+
+def test_branch_state_batch_observes_detached_head(git_repo):
+    import subprocess
+
+    expected_head = subprocess.run(
+        ["git", "-C", str(git_repo), "rev-parse", "HEAD"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    subprocess.run(["git", "-C", str(git_repo), "checkout", "--detach", "-q"], check=True)
+
+    result = observe_checkout(git_repo)
+
+    assert result["observation_complete"] is True
+    assert result["git"]["head"] == expected_head
+    assert result["git"]["branch"] is None
+    assert result["git"]["detached"] is True
+    assert result["git"]["upstream"] is None
+    assert result["git"]["ahead"] is None
+    assert result["git"]["behind"] is None
+
+
+def test_branch_state_batch_observes_unborn_branch(tmp_path):
+    import subprocess
+
+    repo = tmp_path / "unborn"
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    expected_branch = subprocess.run(
+        ["git", "-C", str(repo), "symbolic-ref", "--quiet", "--short", "HEAD"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+
+    result = observe_checkout(repo)
+
+    assert result["is_git_checkout"] is True
+    assert result["observation_complete"] is False
+    assert result["git"]["head"] is None
+    assert result["git"]["branch"] == expected_branch
+    assert result["git"]["detached"] is False
+    assert result["git"]["upstream"] is None
+    assert result["git"]["ahead"] is None
+    assert result["git"]["behind"] is None
+    assert "head_unavailable" in result["errors"]
+
+
+def test_branch_state_batch_observes_upstream_counts(git_repo, tmp_path_factory):
+    import subprocess
+
+    remote = tmp_path_factory.mktemp("reposkop-remote") / "remote.git"
+    subprocess.run(["git", "init", "--bare", "-q", str(remote)], check=True)
+    subprocess.run(["git", "-C", str(git_repo), "remote", "add", "origin", str(remote)], check=True)
+    subprocess.run(["git", "-c", "core.hooksPath=/dev/null", "-C", str(git_repo), "push", "-qu", "origin", "HEAD"], check=True)
+    (git_repo / "file.txt").write_text("two\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(git_repo), "commit", "-qam", "ahead"], check=True)
+    subprocess.run(["git", "-C", str(git_repo), "config", "status.aheadBehind", "false"], check=True)
+
+    result = observe_checkout(git_repo)
+
+    assert result["observation_complete"] is True
+    assert result["git"]["upstream"] is not None
+    assert result["git"]["ahead"] == 1
+    assert result["git"]["behind"] == 0
+
+
+def test_branch_state_probe_falls_back_on_malformed_metadata(git_repo, monkeypatch):
+    import subprocess
+
+    import reposkop.observation as module
+
+    real_git = module._git
+    calls = []
+    combined_args = ["status", "--porcelain=v2", "--branch", "--ahead-behind", "-z", "--untracked-files=no"]
+
+    def probe(path, arguments, *, timeout=10):
+        calls.append(tuple(arguments))
+        if arguments == combined_args:
+            return subprocess.CompletedProcess(
+                arguments,
+                0,
+                "# branch.oid invalid\0# branch.head main\0",
+                "",
+            )
+        return real_git(path, arguments, timeout=timeout)
+
+    monkeypatch.setattr(module, "_git", probe)
+    result = module.observe_checkout(git_repo)
+
+    assert result["observation_complete"] is True
+    assert tuple(combined_args) in calls
+    assert ("rev-parse", "HEAD") in calls
+    assert ("symbolic-ref", "--quiet", "--short", "HEAD") in calls
+    assert ("rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}") in calls
+
+
+def test_branch_state_probe_timeout_is_not_blindly_retried(git_repo, monkeypatch):
+    import subprocess
+
+    import reposkop.observation as module
+
+    real_git = module._git
+    branch_calls = []
+    combined_args = ["status", "--porcelain=v2", "--branch", "--ahead-behind", "-z", "--untracked-files=no"]
+    fallback_args = {
+        ("rev-parse", "HEAD"),
+        ("symbolic-ref", "--quiet", "--short", "HEAD"),
+        ("rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"),
+        ("rev-list", "--left-right", "--count", "HEAD...@{upstream}"),
+    }
+
+    def probe(path, arguments, *, timeout=10):
+        key = tuple(arguments)
+        if arguments == combined_args or key in fallback_args:
+            branch_calls.append(key)
+        if arguments == combined_args:
+            return subprocess.CompletedProcess(arguments, 124, "", "git observation probe timed out")
+        return real_git(path, arguments, timeout=timeout)
+
+    monkeypatch.setattr(module, "_git", probe)
+    result = module.observe_checkout(git_repo)
+
+    assert branch_calls == [tuple(combined_args)]
+    assert result["observation_complete"] is False
+    assert "head_unavailable" in result["errors"]
+    assert result["git"]["head"] is None
+    assert result["git"]["branch"] is None
+    assert result["git"]["upstream"] is None
