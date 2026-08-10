@@ -15,7 +15,7 @@ _ALLOWED_GIT_PROBES = {
     ("rev-parse", "--show-toplevel"),
     ("rev-parse", "--absolute-git-dir"),
     ("rev-parse", "--git-common-dir"),
-    ("rev-parse", "--absolute-git-dir", "--git-common-dir"),
+    ("rev-parse", "--show-toplevel", "--absolute-git-dir", "--git-common-dir"),
     ("rev-parse", "HEAD"),
     ("symbolic-ref", "--quiet", "--short", "HEAD"),
     ("status", "--porcelain=v1", "-z", "--untracked-files=normal"),
@@ -142,21 +142,40 @@ def _resolve_git_path(base: Path, value: str | None) -> Path | None:
     return candidate.resolve(strict=False)
 
 
-def _git_directories(path: Path) -> tuple[Path | None, Path | None]:
-    combined = _git(path, ["rev-parse", "--absolute-git-dir", "--git-common-dir"])
-    if combined.returncode == 0:
-        values = [line.strip() for line in combined.stdout.splitlines()]
-        if len(values) == 2 and all(values):
-            return _resolve_git_path(path, values[0]), _resolve_git_path(path, values[1])
-    elif combined.returncode == 124:
-        return None, None
-
-    # Preserve the previous one-probe-per-value behavior for unusual Git output,
-    # including repository paths containing newlines, instead of guessing boundaries.
+def _git_directories_individually(path: Path) -> tuple[Path | None, Path | None]:
     return (
         _resolve_git_path(path, _text(_git(path, ["rev-parse", "--absolute-git-dir"]))),
         _resolve_git_path(path, _text(_git(path, ["rev-parse", "--git-common-dir"]))),
     )
+
+
+def _git_checkout_paths(
+    path: Path,
+) -> tuple[Path | None, Path | None, Path | None, subprocess.CompletedProcess[str]]:
+    combined = _git(
+        path,
+        ["rev-parse", "--show-toplevel", "--absolute-git-dir", "--git-common-dir"],
+    )
+    if combined.returncode == 0:
+        values = [line.strip() for line in combined.stdout.splitlines()]
+        if len(values) == 3 and all(values):
+            return (
+                Path(values[0]).resolve(strict=False),
+                _resolve_git_path(path, values[1]),
+                _resolve_git_path(path, values[2]),
+                combined,
+            )
+    elif combined.returncode == 124:
+        return None, None, None, combined
+
+    # A path can legally contain newlines, so ambiguous combined output must never
+    # be split by guesswork. Fall back to the original independent probes.
+    toplevel_result = _git(path, ["rev-parse", "--show-toplevel"])
+    toplevel_text = _text(toplevel_result)
+    if toplevel_text is None:
+        return None, None, None, toplevel_result
+    git_dir, common_dir = _git_directories_individually(path)
+    return Path(toplevel_text).resolve(strict=False), git_dir, common_dir, toplevel_result
 
 
 def _remote_identity(url: str | None) -> str | None:
@@ -285,9 +304,8 @@ def observe_checkout(
         base["observation_sha256"] = sha256_json(base)
         return base
 
-    toplevel_result = _git(path, ["rev-parse", "--show-toplevel"])
-    toplevel_text = _text(toplevel_result)
-    if toplevel_text is None:
+    toplevel, git_dir, common_dir, toplevel_result = _git_checkout_paths(path)
+    if toplevel is None:
         base["errors"].append(
             "git_toplevel_probe_timeout" if toplevel_result.returncode == 124 else "not_git_checkout"
         )
@@ -302,8 +320,6 @@ def observe_checkout(
         base["observation_sha256"] = sha256_json(base)
         return base
 
-    toplevel = Path(toplevel_text).resolve(strict=False)
-    git_dir, common_dir = _git_directories(path)
     head = _text(_git(path, ["rev-parse", "HEAD"]))
     branch = _text(_git(path, ["symbolic-ref", "--quiet", "--short", "HEAD"]))
     status_result = _git_bytes(

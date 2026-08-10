@@ -170,7 +170,7 @@ def test_unreviewed_git_probe_is_rejected(git_repo):
         module._git(git_repo, ["fetch", "origin"])
 
 
-def test_git_directory_probes_are_batched_on_normal_checkout(git_repo, monkeypatch):
+def test_checkout_path_probes_are_batched_on_normal_checkout(git_repo, monkeypatch):
     import reposkop.observation as module
 
     real_run = module.subprocess.run
@@ -184,7 +184,13 @@ def test_git_directory_probes_are_batched_on_normal_checkout(git_repo, monkeypat
     result = module.observe_checkout(git_repo)
 
     assert result["observation_complete"] is True
-    assert any(
+    assert sum(
+        argv[-4:]
+        == ["rev-parse", "--show-toplevel", "--absolute-git-dir", "--git-common-dir"]
+        for argv in calls
+    ) == 1
+    assert not any(argv[-2:] == ["rev-parse", "--show-toplevel"] for argv in calls)
+    assert not any(
         argv[-3:] == ["rev-parse", "--absolute-git-dir", "--git-common-dir"]
         for argv in calls
     )
@@ -192,7 +198,7 @@ def test_git_directory_probes_are_batched_on_normal_checkout(git_repo, monkeypat
     assert not any(argv[-2:] == ["rev-parse", "--git-common-dir"] for argv in calls)
 
 
-def test_git_directory_probe_falls_back_when_combined_output_is_ambiguous(
+def test_checkout_path_probe_falls_back_when_combined_output_is_ambiguous(
     git_repo, monkeypatch
 ):
     import subprocess
@@ -201,44 +207,71 @@ def test_git_directory_probe_falls_back_when_combined_output_is_ambiguous(
 
     real_git = module._git
     calls = []
+    combined_args = [
+        "rev-parse",
+        "--show-toplevel",
+        "--absolute-git-dir",
+        "--git-common-dir",
+    ]
 
     def probe(path, arguments, *, timeout=10):
         calls.append(tuple(arguments))
-        if arguments == ["rev-parse", "--absolute-git-dir", "--git-common-dir"]:
-            return subprocess.CompletedProcess(arguments, 0, "one\ntwo\nthree\n", "")
+        if arguments == combined_args:
+            return subprocess.CompletedProcess(arguments, 0, "one\ntwo\nthree\nfour\n", "")
         return real_git(path, arguments, timeout=timeout)
 
     monkeypatch.setattr(module, "_git", probe)
     result = module.observe_checkout(git_repo)
 
     assert result["observation_complete"] is True
+    assert tuple(combined_args) in calls
+    assert ("rev-parse", "--show-toplevel") in calls
     assert ("rev-parse", "--absolute-git-dir") in calls
     assert ("rev-parse", "--git-common-dir") in calls
+    assert ("rev-parse", "--absolute-git-dir", "--git-common-dir") not in calls
 
 
-def test_git_directory_probe_timeout_is_not_blindly_retried(git_repo, monkeypatch):
+def test_checkout_path_probe_timeout_is_not_blindly_retried(git_repo, monkeypatch):
     import subprocess
 
     import reposkop.observation as module
 
     real_git = module._git
-    directory_calls = []
+    checkout_path_calls = []
+    combined_args = [
+        "rev-parse",
+        "--show-toplevel",
+        "--absolute-git-dir",
+        "--git-common-dir",
+    ]
 
     def probe(path, arguments, *, timeout=10):
-        if arguments in (
+        if arguments == combined_args or arguments in (
+            ["rev-parse", "--show-toplevel"],
             ["rev-parse", "--absolute-git-dir", "--git-common-dir"],
             ["rev-parse", "--absolute-git-dir"],
             ["rev-parse", "--git-common-dir"],
         ):
-            directory_calls.append(tuple(arguments))
-        if arguments == ["rev-parse", "--absolute-git-dir", "--git-common-dir"]:
+            checkout_path_calls.append(tuple(arguments))
+        if arguments == combined_args:
             return subprocess.CompletedProcess(arguments, 124, "", "git observation probe timed out")
         return real_git(path, arguments, timeout=timeout)
 
     monkeypatch.setattr(module, "_git", probe)
     result = module.observe_checkout(git_repo)
 
-    assert directory_calls == [("rev-parse", "--absolute-git-dir", "--git-common-dir")]
+    assert checkout_path_calls == [tuple(combined_args)]
     assert result["observation_complete"] is False
-    assert "git_dir_unavailable" in result["errors"]
-    assert "git_common_dir_unavailable" in result["errors"]
+    assert result["errors"] == ["git_toplevel_probe_timeout"]
+    assert result["git_probe"]["returncode"] == 124
+
+
+def test_subdirectory_observation_uses_repository_toplevel(git_repo):
+    nested = git_repo / "nested" / "deeper"
+    nested.mkdir(parents=True)
+
+    result = observe_checkout(nested)
+
+    assert result["observation_complete"] is True
+    assert result["target"]["path"] == str(nested.resolve())
+    assert result["identities"]["path"] == str(git_repo.resolve())
