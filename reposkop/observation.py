@@ -19,6 +19,7 @@ _ALLOWED_GIT_PROBES = {
     ("rev-parse", "HEAD"),
     ("symbolic-ref", "--quiet", "--short", "HEAD"),
     ("status", "--porcelain=v1", "-z", "--untracked-files=normal"),
+    ("status", "--porcelain=v2", "--branch", "--ahead-behind", "-z", "--untracked-files=no"),
     ("config", "--get", "remote.origin.url"),
     ("rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"),
     ("rev-list", "--left-right", "--count", "HEAD...@{upstream}"),
@@ -178,6 +179,101 @@ def _git_checkout_paths(
     return Path(toplevel_text).resolve(strict=False), git_dir, common_dir, toplevel_result
 
 
+def _branch_state_individually(
+    path: Path,
+) -> tuple[str | None, str | None, str | None, int | None, int | None, bool]:
+    head = _text(_git(path, ["rev-parse", "HEAD"]))
+    branch = _text(_git(path, ["symbolic-ref", "--quiet", "--short", "HEAD"]))
+    upstream = _text(
+        _git(path, ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"])
+    )
+    ahead: int | None = None
+    behind: int | None = None
+    counts_unparseable = False
+    if upstream:
+        counts = _text(_git(path, ["rev-list", "--left-right", "--count", "HEAD...@{upstream}"]))
+        if counts:
+            try:
+                ahead_text, behind_text = counts.split()
+                ahead, behind = int(ahead_text), int(behind_text)
+            except (ValueError, TypeError):
+                counts_unparseable = True
+    return head, branch, upstream, ahead, behind, counts_unparseable
+
+
+def _parse_branch_status_v2_z(
+    payload: str,
+) -> tuple[str | None, str | None, str | None, int | None, int | None]:
+    fields: dict[str, str] = {}
+    prefixes = {
+        "# branch.oid ": "oid",
+        "# branch.head ": "head",
+        "# branch.upstream ": "upstream",
+        "# branch.ab ": "ab",
+    }
+    for record in payload.split("\0"):
+        if not record.startswith("# branch."):
+            continue
+        for prefix, key in prefixes.items():
+            if record.startswith(prefix):
+                if key in fields:
+                    raise ValueError(f"duplicate branch status field: {key}")
+                value = record[len(prefix) :]
+                if not value:
+                    raise ValueError(f"empty branch status field: {key}")
+                fields[key] = value
+                break
+
+    if "oid" not in fields or "head" not in fields:
+        raise ValueError("branch status is missing oid or head")
+
+    oid = fields["oid"]
+    if oid == "(initial)":
+        head: str | None = None
+    else:
+        if not 40 <= len(oid) <= 64 or any(character not in "0123456789abcdef" for character in oid):
+            raise ValueError("branch status has an invalid object id")
+        head = oid
+
+    branch = None if fields["head"] == "(detached)" else fields["head"]
+    upstream = fields.get("upstream")
+    ahead: int | None = None
+    behind: int | None = None
+    ab = fields.get("ab")
+    if ab is not None:
+        if upstream is None:
+            raise ValueError("branch status has ahead/behind counts without upstream")
+        parts = ab.split()
+        if len(parts) != 2 or not parts[0].startswith("+") or not parts[1].startswith("-"):
+            raise ValueError("branch status has malformed ahead/behind counts")
+        try:
+            ahead = int(parts[0][1:])
+            behind = int(parts[1][1:])
+        except ValueError as exc:
+            raise ValueError("branch status has non-integer ahead/behind counts") from exc
+        if ahead < 0 or behind < 0:
+            raise ValueError("branch status has negative ahead/behind counts")
+
+    return head, branch, upstream, ahead, behind
+
+
+def _branch_state(
+    path: Path,
+) -> tuple[str | None, str | None, str | None, int | None, int | None, bool]:
+    combined = _git(path, ["status", "--porcelain=v2", "--branch", "--ahead-behind", "-z", "--untracked-files=no"])
+    if combined.returncode == 0:
+        try:
+            return (*_parse_branch_status_v2_z(combined.stdout), False)
+        except ValueError:
+            pass
+    elif combined.returncode == 124:
+        return None, None, None, None, None, False
+
+    # Preserve the prior per-field behavior when Git emits an unexpected branch
+    # status shape. A timed-out combined probe is not blindly retried.
+    return _branch_state_individually(path)
+
+
 def _remote_identity(url: str | None) -> str | None:
     if not url or not url.strip():
         return None
@@ -320,8 +416,7 @@ def observe_checkout(
         base["observation_sha256"] = sha256_json(base)
         return base
 
-    head = _text(_git(path, ["rev-parse", "HEAD"]))
-    branch = _text(_git(path, ["symbolic-ref", "--quiet", "--short", "HEAD"]))
+    head, branch, upstream, ahead, behind, counts_unparseable = _branch_state(path)
     status_result = _git_bytes(
         path,
         ["status", "--porcelain=v1", "-z", "--untracked-files=normal"],
@@ -357,19 +452,8 @@ def observe_checkout(
             observation_complete = False
     origin_url = _text(_git(path, ["config", "--get", "remote.origin.url"]))
     remote = _remote_identity(origin_url)
-    upstream = _text(
-        _git(path, ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"])
-    )
-    ahead: int | None = None
-    behind: int | None = None
-    if upstream:
-        counts = _text(_git(path, ["rev-list", "--left-right", "--count", "HEAD...@{upstream}"]))
-        if counts:
-            try:
-                ahead_text, behind_text = counts.split()
-                ahead, behind = int(ahead_text), int(behind_text)
-            except (ValueError, TypeError):
-                base["errors"].append("upstream_counts_unparseable")
+    if counts_unparseable:
+        base["errors"].append("upstream_counts_unparseable")
 
     role, role_reasons = classify_role(
         path=toplevel,
