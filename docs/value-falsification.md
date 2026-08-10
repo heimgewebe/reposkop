@@ -73,9 +73,22 @@ validation recomputes the field deltas and classification from the embedded shad
 This closes the local measurement gap without importing consumer semantics: materiality, recovery
 improvement and wrong-checkout prevention remain external evidence.
 
-Aggregate only bounded, purpose-bound shadow receipts. Evaluate whether identity breaks were
-material, whether the simpler baseline would have missed them, and whether they improved recovery
-or prevented a wrong-checkout action. Ordinary HEAD/branch/common-dir drift is not unique value.
+Reposkop also provides a canonical bounded set artifact for the local half of that audit:
+
+```text
+reposkop shadow-value-set --purpose real-consumer-shadow \
+  --assessment shadow-value-1.json --assessment shadow-value-2.json --json > shadow-value-set.json
+```
+
+A set accepts only an explicit list of 1..128 valid assessments whose embedded before/after
+observations carry the same exact purpose. It rejects duplicates, sorts by assessment digest, never
+truncates silently, and reports only classification counts plus the observation window. It does not
+claim that the sample is representative or sufficient and cannot decide retention.
+
+Aggregate only bounded, purpose-bound shadow receipts. Join that local set with consumer-owned
+outcome evidence to evaluate whether identity breaks were material, whether the simpler baseline
+would have missed them, and whether they improved recovery or prevented a wrong-checkout action.
+Ordinary HEAD/branch/common-dir drift is not unique value.
 
 ## Falsification criterion
 

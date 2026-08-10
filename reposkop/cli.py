@@ -14,6 +14,7 @@ from .report import build_report
 from .schema_validation import validate_artifact
 from .shadow import build_shadow_transition
 from .shadow_value import build_shadow_value_assessment
+from .shadow_value_set import build_shadow_value_set
 from .transition import observe_continuity, observe_transition
 
 
@@ -67,6 +68,14 @@ def build_parser() -> argparse.ArgumentParser:
     shadow_value.add_argument("--shadow", required=True)
     shadow_value.add_argument("--json", action="store_true", required=True)
 
+    shadow_value_set = sub.add_parser(
+        "shadow-value-set",
+        help="aggregate an explicit bounded set of purpose-bound shadow-value assessments",
+    )
+    shadow_value_set.add_argument("--purpose", required=True)
+    shadow_value_set.add_argument("--assessment", action="append", required=True)
+    shadow_value_set.add_argument("--json", action="store_true", required=True)
+
     report = sub.add_parser("report", help="build one source-bound coherence report")
     report.add_argument("path")
     report.add_argument("--role", choices=ROLE_VALUES)
@@ -116,6 +125,12 @@ def main(argv: list[str] | None = None) -> int:
             _emit(build_shadow_transition(load_json(args.before), load_json(args.after)))
         elif args.command == "shadow-value":
             _emit(build_shadow_value_assessment(load_json(args.shadow)))
+        elif args.command == "shadow-value-set":
+            _emit(
+                build_shadow_value_set(
+                    [load_json(path) for path in args.assessment], purpose=args.purpose
+                )
+            )
         elif args.command == "report":
             evidence = load_json(args.lifecycle_evidence) if args.lifecycle_evidence else None
             _emit(

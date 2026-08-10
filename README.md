@@ -82,6 +82,14 @@ path. It classifies the local result as `unique_identity_signal`, `baseline_visi
 `no_identity_break` or `inconclusive`. The artifact deliberately does not claim materiality, recovery
 value, wrong-checkout prevention or effect permission.
 
+### Shadow value set v1
+
+A shadow value set aggregates an explicit, purpose-bound list of at most 128 validated shadow value
+assessments. Assessments are canonicalized by digest and summarized only by the four local
+differential classifications plus their observation window. The set never truncates silently and
+rejects duplicate digests or mixed purposes. Consumer outcome truth, evidence sufficiency and any
+retain/migrate/retire decision remain outside Reposkop.
+
 ## Commands
 
 ```text
@@ -90,6 +98,7 @@ reposkop transition <path> --before <observation.json> [--role <role>] [--purpos
 reposkop continuity <path> --expected <observation.json> [--role <role>] [--purpose <purpose>] --json
 reposkop shadow --before <observation.json> --after <observation.json> --json
 reposkop shadow-value --shadow <shadow.json> --json
+reposkop shadow-value-set --purpose <purpose> --assessment <assessment.json> [--assessment <assessment.json> ...] --json
 reposkop report <path> [--role <role>] [--purpose <purpose>] [--lifecycle-evidence <file>] --json
 reposkop project <observation.json> [--lifecycle-evidence <file>] --json
 reposkop inventory --config <explicit-targets.json> --json
