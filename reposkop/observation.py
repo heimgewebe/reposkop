@@ -15,6 +15,7 @@ _ALLOWED_GIT_PROBES = {
     ("rev-parse", "--show-toplevel"),
     ("rev-parse", "--absolute-git-dir"),
     ("rev-parse", "--git-common-dir"),
+    ("rev-parse", "--absolute-git-dir", "--git-common-dir"),
     ("rev-parse", "HEAD"),
     ("symbolic-ref", "--quiet", "--short", "HEAD"),
     ("status", "--porcelain=v1", "-z", "--untracked-files=normal"),
@@ -139,6 +140,23 @@ def _resolve_git_path(base: Path, value: str | None) -> Path | None:
     if not candidate.is_absolute():
         candidate = base / candidate
     return candidate.resolve(strict=False)
+
+
+def _git_directories(path: Path) -> tuple[Path | None, Path | None]:
+    combined = _git(path, ["rev-parse", "--absolute-git-dir", "--git-common-dir"])
+    if combined.returncode == 0:
+        values = [line.strip() for line in combined.stdout.splitlines()]
+        if len(values) == 2 and all(values):
+            return _resolve_git_path(path, values[0]), _resolve_git_path(path, values[1])
+    elif combined.returncode == 124:
+        return None, None
+
+    # Preserve the previous one-probe-per-value behavior for unusual Git output,
+    # including repository paths containing newlines, instead of guessing boundaries.
+    return (
+        _resolve_git_path(path, _text(_git(path, ["rev-parse", "--absolute-git-dir"]))),
+        _resolve_git_path(path, _text(_git(path, ["rev-parse", "--git-common-dir"]))),
+    )
 
 
 def _remote_identity(url: str | None) -> str | None:
@@ -285,8 +303,7 @@ def observe_checkout(
         return base
 
     toplevel = Path(toplevel_text).resolve(strict=False)
-    git_dir = _resolve_git_path(path, _text(_git(path, ["rev-parse", "--absolute-git-dir"])))
-    common_dir = _resolve_git_path(path, _text(_git(path, ["rev-parse", "--git-common-dir"])))
+    git_dir, common_dir = _git_directories(path)
     head = _text(_git(path, ["rev-parse", "HEAD"]))
     branch = _text(_git(path, ["symbolic-ref", "--quiet", "--short", "HEAD"]))
     status_result = _git_bytes(
