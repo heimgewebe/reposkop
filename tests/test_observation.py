@@ -453,6 +453,69 @@ def test_combined_status_preserves_v1_digest_and_all_dirty_indicators(git_repo):
     assert result["git"]["status_entry_count"] == 2
 
 
+def test_combined_status_preserves_v1_digest_for_dirty_submodule(git_repo, tmp_path_factory):
+    import hashlib
+    import subprocess
+
+    submodule_source = tmp_path_factory.mktemp("reposkop-submodule-source")
+    subprocess.run(["git", "init", "-q", str(submodule_source)], check=True)
+    subprocess.run(
+        ["git", "-C", str(submodule_source), "config", "user.email", "test@example.invalid"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(submodule_source), "config", "user.name", "Reposkop Test"],
+        check=True,
+    )
+    (submodule_source / "tracked.txt").write_text("one\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(submodule_source), "add", "tracked.txt"], check=True)
+    subprocess.run(
+        ["git", "-C", str(submodule_source), "commit", "-qm", "initial"],
+        check=True,
+    )
+    subprocess.run(
+        [
+            "git",
+            "-c",
+            "protocol.file.allow=always",
+            "-C",
+            str(git_repo),
+            "submodule",
+            "add",
+            "-q",
+            str(submodule_source),
+            "sm",
+        ],
+        check=True,
+    )
+    subprocess.run(["git", "-C", str(git_repo), "commit", "-qam", "add submodule"], check=True)
+
+    submodule = git_repo / "sm"
+
+    def assert_status_matches_v1():
+        expected = _porcelain_v1_status(git_repo)
+        result = observe_checkout(git_repo)
+
+        assert expected == b" M sm\0"
+        assert result["git"]["dirty"] is True
+        assert result["git"]["unstaged"] is True
+        assert result["git"]["status_entry_count"] == 1
+        assert result["git"]["status_sha256"] == hashlib.sha256(expected).hexdigest()
+
+    (submodule / "tracked.txt").write_text("modified\n", encoding="utf-8")
+    assert_status_matches_v1()
+    (submodule / "tracked.txt").write_text("one\n", encoding="utf-8")
+
+    untracked = submodule / "untracked.txt"
+    untracked.write_text("new\n", encoding="utf-8")
+    assert_status_matches_v1()
+    untracked.unlink()
+
+    (submodule / "tracked.txt").write_text("committed\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(submodule), "commit", "-qam", "advance"], check=True)
+    assert_status_matches_v1()
+
+
 def test_branch_state_batch_observes_detached_head(git_repo):
     import subprocess
 
@@ -608,13 +671,14 @@ def test_status_probe_falls_back_on_malformed_combined_status(git_repo, monkeypa
 
 
 def test_combined_status_timeout_is_not_blindly_retried(git_repo, monkeypatch):
+    import hashlib
     import subprocess
 
     import reposkop.observation as module
 
     real_git = module._git
     real_git_bytes = module._git_bytes
-    branch_calls = []
+    calls = []
     combined_args = [
         "status",
         "--porcelain=v2",
@@ -634,13 +698,13 @@ def test_combined_status_timeout_is_not_blindly_retried(git_repo, monkeypatch):
     def probe(path, arguments, *, timeout=10):
         key = tuple(arguments)
         if key in fallback_args:
-            branch_calls.append(key)
+            calls.append(key)
         return real_git(path, arguments, timeout=timeout)
 
     def raw_probe(path, arguments, *, timeout=10):
         key = tuple(arguments)
         if arguments == combined_args or key in fallback_args:
-            branch_calls.append(key)
+            calls.append(key)
         if arguments == combined_args:
             return subprocess.CompletedProcess(
                 arguments,
@@ -652,13 +716,19 @@ def test_combined_status_timeout_is_not_blindly_retried(git_repo, monkeypatch):
 
     monkeypatch.setattr(module, "_git", probe)
     monkeypatch.setattr(module, "_git_bytes", raw_probe)
+    expected = _porcelain_v1_status(git_repo)
     result = module.observe_checkout(git_repo)
 
-    assert branch_calls == [tuple(combined_args)]
+    assert calls.count(tuple(combined_args)) == 1
+    assert calls.count(("status", "--porcelain=v1", "-z", "--untracked-files=normal")) == 1
+    assert not any(call in calls for call in fallback_args if call[0] != "status")
     assert result["observation_complete"] is False
     assert "head_unavailable" in result["errors"]
-    assert "status_failed" in result["errors"]
+    assert "status_failed" not in result["errors"]
     assert result["git"]["head"] is None
     assert result["git"]["branch"] is None
     assert result["git"]["upstream"] is None
-    assert result["git"]["dirty"] is None
+    assert result["git"]["ahead"] is None
+    assert result["git"]["behind"] is None
+    assert result["git"]["dirty"] is False
+    assert result["git"]["status_sha256"] == hashlib.sha256(expected).hexdigest()

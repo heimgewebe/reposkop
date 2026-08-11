@@ -425,7 +425,11 @@ def _status_and_branch_state(
         except ValueError:
             pass
     elif combined.returncode == 124:
-        return None, None, None, None, None, False, combined
+        status_result = _git_bytes(
+            path,
+            ["status", "--porcelain=v1", "-z", "--untracked-files=normal"],
+        )
+        return None, None, None, None, None, False, status_result
 
     # Preserve the prior probes when combined metadata or status records are
     # unexpected. A timed-out combined status probe is not blindly retried.
