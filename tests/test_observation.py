@@ -3,6 +3,24 @@ from __future__ import annotations
 from reposkop.observation import observe_checkout
 
 
+def _porcelain_v1_status(repo):
+    import subprocess
+
+    return subprocess.run(
+        [
+            "git",
+            "-C",
+            str(repo),
+            "status",
+            "--porcelain=v1",
+            "-z",
+            "--untracked-files=normal",
+        ],
+        check=True,
+        capture_output=True,
+    ).stdout
+
+
 def test_clean_repository_observation(git_repo):
     result = observe_checkout(git_repo)
     assert result["kind"] == "reposkop_checkout_observation"
@@ -31,18 +49,81 @@ def test_untracked_file_is_not_misclassified_as_unstaged(git_repo):
 
 
 def test_staged_rename_is_one_status_entry(git_repo):
+    import hashlib
     import subprocess
 
+    renamed = "renamed →\nfile.txt"
     subprocess.run(
-        ["git", "-C", str(git_repo), "mv", "file.txt", "renamed.txt"],
+        ["git", "-C", str(git_repo), "mv", "file.txt", renamed],
         check=True,
     )
+    expected = _porcelain_v1_status(git_repo)
     result = observe_checkout(git_repo)
     assert result["git"]["dirty"] is True
     assert result["git"]["staged"] is True
     assert result["git"]["unstaged"] is False
     assert result["git"]["untracked"] is False
     assert result["git"]["status_entry_count"] == 1
+    assert result["git"]["status_sha256"] == hashlib.sha256(expected).hexdigest()
+
+
+def test_staged_copy_and_special_paths_preserve_v1_status_digest(git_repo):
+    import hashlib
+    import subprocess
+
+    copied = "copied →\nfile.txt"
+    subprocess.run(
+        ["git", "-C", str(git_repo), "config", "status.renames", "copies"],
+        check=True,
+    )
+    subprocess.run(["git", "-C", str(git_repo), "mv", "file.txt", copied], check=True)
+    (git_repo / "file.txt").write_text("different\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(git_repo), "add", "file.txt"], check=True)
+    expected = _porcelain_v1_status(git_repo)
+
+    assert b"C  copied" in expected
+    result = observe_checkout(git_repo)
+
+    assert result["git"]["dirty"] is True
+    assert result["git"]["staged"] is True
+    assert result["git"]["unstaged"] is False
+    assert result["git"]["untracked"] is False
+    assert result["git"]["status_entry_count"] == 2
+    assert result["git"]["status_sha256"] == hashlib.sha256(expected).hexdigest()
+
+
+def test_unmerged_status_preserves_v1_status_digest(git_repo):
+    import hashlib
+    import subprocess
+
+    base_branch = subprocess.run(
+        ["git", "-C", str(git_repo), "branch", "--show-current"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    subprocess.run(["git", "-C", str(git_repo), "checkout", "-qb", "conflict"], check=True)
+    (git_repo / "file.txt").write_text("conflict branch\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(git_repo), "commit", "-qam", "conflict"], check=True)
+    subprocess.run(["git", "-C", str(git_repo), "checkout", "-q", base_branch], check=True)
+    (git_repo / "file.txt").write_text("base branch\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(git_repo), "commit", "-qam", "base"], check=True)
+    merge = subprocess.run(
+        ["git", "-C", str(git_repo), "merge", "conflict"],
+        check=False,
+        capture_output=True,
+    )
+    expected = _porcelain_v1_status(git_repo)
+
+    assert merge.returncode == 1
+    result = observe_checkout(git_repo)
+
+    assert result["git"]["dirty"] is True
+    assert result["git"]["staged"] is True
+    assert result["git"]["unstaged"] is True
+    assert result["git"]["untracked"] is False
+    assert result["git"]["status_entry_count"] == 1
+    assert result["git"]["status_sha256"] == hashlib.sha256(expected).hexdigest()
 
 
 def test_inherited_git_dir_cannot_redirect_target(git_repo, monkeypatch):
@@ -103,19 +184,39 @@ def test_remote_hosts_do_not_collide(git_repo):
 
 
 def test_raw_non_utf8_status_bytes_have_distinct_digests(git_repo, monkeypatch):
+    import hashlib
     import subprocess
 
     import reposkop.observation as module
 
-    payloads = iter((b"?? \xff\0", b"?? \xfe\0"))
+    combined_args = [
+        "status",
+        "--porcelain=v2",
+        "--branch",
+        "--ahead-behind",
+        "-z",
+        "--untracked-files=normal",
+    ]
+    raw_paths = iter((b"\xff", b"\xfe"))
+    real_git_bytes = module._git_bytes
 
     def raw_probe(path, arguments, *, timeout=10):
-        return subprocess.CompletedProcess(arguments, 0, next(payloads), b"")
+        if arguments == combined_args:
+            payload = (
+                b"# branch.oid "
+                + b"0" * 40
+                + b"\0# branch.head main\0? "
+                + next(raw_paths)
+                + b"\0"
+            )
+            return subprocess.CompletedProcess(arguments, 0, payload, b"")
+        return real_git_bytes(path, arguments, timeout=timeout)
 
     monkeypatch.setattr(module, "_git_bytes", raw_probe)
     first = module.observe_checkout(git_repo)
     second = module.observe_checkout(git_repo)
-    assert first["git"]["status_sha256"] != second["git"]["status_sha256"]
+    assert first["git"]["status_sha256"] == hashlib.sha256(b"?? \xff\0").hexdigest()
+    assert second["git"]["status_sha256"] == hashlib.sha256(b"?? \xfe\0").hexdigest()
     assert first["git"]["untracked"] is True
     assert second["git"]["untracked"] is True
 
@@ -277,7 +378,7 @@ def test_subdirectory_observation_uses_repository_toplevel(git_repo):
     assert result["identities"]["path"] == str(git_repo.resolve())
 
 
-def test_branch_state_probe_is_batched_on_normal_checkout(git_repo, monkeypatch):
+def test_status_and_branch_state_probe_is_batched_on_normal_checkout(git_repo, monkeypatch):
     import reposkop.observation as module
 
     real_run = module.subprocess.run
@@ -292,9 +393,33 @@ def test_branch_state_probe_is_batched_on_normal_checkout(git_repo, monkeypatch)
 
     assert result["observation_complete"] is True
     assert sum(
-        argv[-6:] == ["status", "--porcelain=v2", "--branch", "--ahead-behind", "-z", "--untracked-files=no"]
+        argv[-6:]
+        == [
+            "status",
+            "--porcelain=v2",
+            "--branch",
+            "--ahead-behind",
+            "-z",
+            "--untracked-files=normal",
+        ]
         for argv in calls
     ) == 1
+    assert not any(
+        argv[-4:] == ["status", "--porcelain=v1", "-z", "--untracked-files=normal"]
+        for argv in calls
+    )
+    assert not any(
+        argv[-6:]
+        == [
+            "status",
+            "--porcelain=v2",
+            "--branch",
+            "--ahead-behind",
+            "-z",
+            "--untracked-files=no",
+        ]
+        for argv in calls
+    )
     assert not any(argv[-2:] == ["rev-parse", "HEAD"] for argv in calls)
     assert not any(argv[-4:] == ["symbolic-ref", "--quiet", "--short", "HEAD"] for argv in calls)
     assert not any(
@@ -305,32 +430,92 @@ def test_branch_state_probe_is_batched_on_normal_checkout(git_repo, monkeypatch)
         argv[-4:] == ["rev-list", "--left-right", "--count", "HEAD...@{upstream}"]
         for argv in calls
     )
-    assert len(calls) == 4
+    assert len(calls) == 3
 
 
-def test_branch_state_batch_preserves_porcelain_v1_status_digest(git_repo):
+def test_combined_status_preserves_v1_digest_and_all_dirty_indicators(git_repo):
     import hashlib
     import subprocess
 
-    (git_repo / "new.txt").write_text("new\n", encoding="utf-8")
-    expected = subprocess.run(
-        [
-            "git",
-            "-C",
-            str(git_repo),
-            "status",
-            "--porcelain=v1",
-            "-z",
-            "--untracked-files=normal",
-        ],
-        check=True,
-        capture_output=True,
-    ).stdout
+    (git_repo / "file.txt").write_text("staged\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(git_repo), "add", "file.txt"], check=True)
+    (git_repo / "file.txt").write_text("unstaged\n", encoding="utf-8")
+    (git_repo / "new →\nfile.txt").write_text("untracked\n", encoding="utf-8")
+    expected = _porcelain_v1_status(git_repo)
 
     result = observe_checkout(git_repo)
 
     assert result["git"]["status_sha256"] == hashlib.sha256(expected).hexdigest()
+    assert result["git"]["dirty"] is True
+    assert result["git"]["staged"] is True
+    assert result["git"]["unstaged"] is True
     assert result["git"]["untracked"] is True
+    assert result["git"]["status_entry_count"] == 2
+
+
+def test_combined_status_preserves_v1_digest_for_dirty_submodule(git_repo, tmp_path_factory):
+    import hashlib
+    import subprocess
+
+    submodule_source = tmp_path_factory.mktemp("reposkop-submodule-source")
+    subprocess.run(["git", "init", "-q", str(submodule_source)], check=True)
+    subprocess.run(
+        ["git", "-C", str(submodule_source), "config", "user.email", "test@example.invalid"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(submodule_source), "config", "user.name", "Reposkop Test"],
+        check=True,
+    )
+    (submodule_source / "tracked.txt").write_text("one\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(submodule_source), "add", "tracked.txt"], check=True)
+    subprocess.run(
+        ["git", "-C", str(submodule_source), "commit", "-qm", "initial"],
+        check=True,
+    )
+    subprocess.run(
+        [
+            "git",
+            "-c",
+            "protocol.file.allow=always",
+            "-C",
+            str(git_repo),
+            "submodule",
+            "add",
+            "-q",
+            str(submodule_source),
+            "sm",
+        ],
+        check=True,
+    )
+    subprocess.run(["git", "-C", str(git_repo), "commit", "-qam", "add submodule"], check=True)
+
+    submodule = git_repo / "sm"
+    subprocess.run(["git", "-C", str(submodule), "config", "user.email", "test@example.invalid"], check=True)
+    subprocess.run(["git", "-C", str(submodule), "config", "user.name", "Reposkop Test"], check=True)
+
+    def assert_status_matches_v1():
+        expected = _porcelain_v1_status(git_repo)
+        result = observe_checkout(git_repo)
+
+        assert expected == b" M sm\0"
+        assert result["git"]["dirty"] is True
+        assert result["git"]["unstaged"] is True
+        assert result["git"]["status_entry_count"] == 1
+        assert result["git"]["status_sha256"] == hashlib.sha256(expected).hexdigest()
+
+    (submodule / "tracked.txt").write_text("modified\n", encoding="utf-8")
+    assert_status_matches_v1()
+    (submodule / "tracked.txt").write_text("one\n", encoding="utf-8")
+
+    untracked = submodule / "untracked.txt"
+    untracked.write_text("new\n", encoding="utf-8")
+    assert_status_matches_v1()
+    untracked.unlink()
+
+    (submodule / "tracked.txt").write_text("committed\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(submodule), "commit", "-qam", "advance"], check=True)
+    assert_status_matches_v1()
 
 
 def test_branch_state_batch_observes_detached_head(git_repo):
@@ -405,21 +590,34 @@ def test_branch_state_probe_falls_back_on_malformed_metadata(git_repo, monkeypat
     import reposkop.observation as module
 
     real_git = module._git
+    real_git_bytes = module._git_bytes
     calls = []
-    combined_args = ["status", "--porcelain=v2", "--branch", "--ahead-behind", "-z", "--untracked-files=no"]
+    combined_args = [
+        "status",
+        "--porcelain=v2",
+        "--branch",
+        "--ahead-behind",
+        "-z",
+        "--untracked-files=normal",
+    ]
 
     def probe(path, arguments, *, timeout=10):
+        calls.append(tuple(arguments))
+        return real_git(path, arguments, timeout=timeout)
+
+    def raw_probe(path, arguments, *, timeout=10):
         calls.append(tuple(arguments))
         if arguments == combined_args:
             return subprocess.CompletedProcess(
                 arguments,
                 0,
-                "# branch.oid invalid\0# branch.head main\0",
-                "",
+                b"# branch.oid invalid\0# branch.head main\0",
+                b"",
             )
-        return real_git(path, arguments, timeout=timeout)
+        return real_git_bytes(path, arguments, timeout=timeout)
 
     monkeypatch.setattr(module, "_git", probe)
+    monkeypatch.setattr(module, "_git_bytes", raw_probe)
     result = module.observe_checkout(git_repo)
 
     assert result["observation_complete"] is True
@@ -427,37 +625,112 @@ def test_branch_state_probe_falls_back_on_malformed_metadata(git_repo, monkeypat
     assert ("rev-parse", "HEAD") in calls
     assert ("symbolic-ref", "--quiet", "--short", "HEAD") in calls
     assert ("rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}") in calls
+    assert ("status", "--porcelain=v1", "-z", "--untracked-files=normal") in calls
 
 
-def test_branch_state_probe_timeout_is_not_blindly_retried(git_repo, monkeypatch):
+def test_status_probe_falls_back_on_malformed_combined_status(git_repo, monkeypatch):
     import subprocess
 
     import reposkop.observation as module
 
     real_git = module._git
-    branch_calls = []
-    combined_args = ["status", "--porcelain=v2", "--branch", "--ahead-behind", "-z", "--untracked-files=no"]
+    real_git_bytes = module._git_bytes
+    calls = []
+    combined_args = [
+        "status",
+        "--porcelain=v2",
+        "--branch",
+        "--ahead-behind",
+        "-z",
+        "--untracked-files=normal",
+    ]
+
+    def probe(path, arguments, *, timeout=10):
+        calls.append(tuple(arguments))
+        return real_git(path, arguments, timeout=timeout)
+
+    def raw_probe(path, arguments, *, timeout=10):
+        calls.append(tuple(arguments))
+        if arguments == combined_args:
+            payload = (
+                b"# branch.oid "
+                + b"0" * 40
+                + b"\0# branch.head main\0"
+                + b"1 malformed\0"
+            )
+            return subprocess.CompletedProcess(arguments, 0, payload, b"")
+        return real_git_bytes(path, arguments, timeout=timeout)
+
+    monkeypatch.setattr(module, "_git", probe)
+    monkeypatch.setattr(module, "_git_bytes", raw_probe)
+    result = module.observe_checkout(git_repo)
+
+    assert result["observation_complete"] is True
+    assert tuple(combined_args) in calls
+    assert ("rev-parse", "HEAD") in calls
+    assert ("symbolic-ref", "--quiet", "--short", "HEAD") in calls
+    assert ("status", "--porcelain=v1", "-z", "--untracked-files=normal") in calls
+
+
+def test_combined_status_timeout_is_not_blindly_retried(git_repo, monkeypatch):
+    import hashlib
+    import subprocess
+
+    import reposkop.observation as module
+
+    real_git = module._git
+    real_git_bytes = module._git_bytes
+    calls = []
+    combined_args = [
+        "status",
+        "--porcelain=v2",
+        "--branch",
+        "--ahead-behind",
+        "-z",
+        "--untracked-files=normal",
+    ]
     fallback_args = {
         ("rev-parse", "HEAD"),
         ("symbolic-ref", "--quiet", "--short", "HEAD"),
         ("rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"),
         ("rev-list", "--left-right", "--count", "HEAD...@{upstream}"),
+        ("status", "--porcelain=v1", "-z", "--untracked-files=normal"),
     }
 
     def probe(path, arguments, *, timeout=10):
         key = tuple(arguments)
-        if arguments == combined_args or key in fallback_args:
-            branch_calls.append(key)
-        if arguments == combined_args:
-            return subprocess.CompletedProcess(arguments, 124, "", "git observation probe timed out")
+        if key in fallback_args:
+            calls.append(key)
         return real_git(path, arguments, timeout=timeout)
 
+    def raw_probe(path, arguments, *, timeout=10):
+        key = tuple(arguments)
+        if arguments == combined_args or key in fallback_args:
+            calls.append(key)
+        if arguments == combined_args:
+            return subprocess.CompletedProcess(
+                arguments,
+                124,
+                b"",
+                b"git observation probe timed out",
+            )
+        return real_git_bytes(path, arguments, timeout=timeout)
+
     monkeypatch.setattr(module, "_git", probe)
+    monkeypatch.setattr(module, "_git_bytes", raw_probe)
+    expected = _porcelain_v1_status(git_repo)
     result = module.observe_checkout(git_repo)
 
-    assert branch_calls == [tuple(combined_args)]
+    assert calls.count(tuple(combined_args)) == 1
+    assert calls.count(("status", "--porcelain=v1", "-z", "--untracked-files=normal")) == 1
+    assert not any(call in calls for call in fallback_args if call[0] != "status")
     assert result["observation_complete"] is False
     assert "head_unavailable" in result["errors"]
+    assert "status_failed" not in result["errors"]
     assert result["git"]["head"] is None
     assert result["git"]["branch"] is None
     assert result["git"]["upstream"] is None
+    assert result["git"]["ahead"] is None
+    assert result["git"]["behind"] is None
+    assert result["git"]["dirty"] is False
+    assert result["git"]["status_sha256"] == hashlib.sha256(expected).hexdigest()

@@ -19,7 +19,14 @@ _ALLOWED_GIT_PROBES = {
     ("rev-parse", "HEAD"),
     ("symbolic-ref", "--quiet", "--short", "HEAD"),
     ("status", "--porcelain=v1", "-z", "--untracked-files=normal"),
-    ("status", "--porcelain=v2", "--branch", "--ahead-behind", "-z", "--untracked-files=no"),
+    (
+        "status",
+        "--porcelain=v2",
+        "--branch",
+        "--ahead-behind",
+        "-z",
+        "--untracked-files=normal",
+    ),
     ("config", "--get", "remote.origin.url"),
     ("rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"),
     ("rev-list", "--left-right", "--count", "HEAD...@{upstream}"),
@@ -202,17 +209,17 @@ def _branch_state_individually(
 
 
 def _parse_branch_status_v2_z(
-    payload: str,
+    payload: bytes,
 ) -> tuple[str | None, str | None, str | None, int | None, int | None]:
-    fields: dict[str, str] = {}
+    fields: dict[str, bytes] = {}
     prefixes = {
-        "# branch.oid ": "oid",
-        "# branch.head ": "head",
-        "# branch.upstream ": "upstream",
-        "# branch.ab ": "ab",
+        b"# branch.oid ": "oid",
+        b"# branch.head ": "head",
+        b"# branch.upstream ": "upstream",
+        b"# branch.ab ": "ab",
     }
-    for record in payload.split("\0"):
-        if not record.startswith("# branch."):
+    for record in payload.split(b"\0"):
+        if not record.startswith(b"# branch."):
             continue
         for prefix, key in prefixes.items():
             if record.startswith(prefix):
@@ -228,15 +235,26 @@ def _parse_branch_status_v2_z(
         raise ValueError("branch status is missing oid or head")
 
     oid = fields["oid"]
-    if oid == "(initial)":
+    if oid == b"(initial)":
         head: str | None = None
     else:
-        if not 40 <= len(oid) <= 64 or any(character not in "0123456789abcdef" for character in oid):
+        if not 40 <= len(oid) <= 64 or any(
+            character not in b"0123456789abcdef" for character in oid
+        ):
             raise ValueError("branch status has an invalid object id")
-        head = oid
+        head = oid.decode("ascii")
 
-    branch = None if fields["head"] == "(detached)" else fields["head"]
-    upstream = fields.get("upstream")
+    branch = (
+        None
+        if fields["head"] == b"(detached)"
+        else fields["head"].decode("utf-8", errors="replace")
+    )
+    upstream_bytes = fields.get("upstream")
+    upstream = (
+        upstream_bytes.decode("utf-8", errors="replace")
+        if upstream_bytes is not None
+        else None
+    )
     ahead: int | None = None
     behind: int | None = None
     ab = fields.get("ab")
@@ -244,7 +262,7 @@ def _parse_branch_status_v2_z(
         if upstream is None:
             raise ValueError("branch status has ahead/behind counts without upstream")
         parts = ab.split()
-        if len(parts) != 2 or not parts[0].startswith("+") or not parts[1].startswith("-"):
+        if len(parts) != 2 or not parts[0].startswith(b"+") or not parts[1].startswith(b"-"):
             raise ValueError("branch status has malformed ahead/behind counts")
         try:
             ahead = int(parts[0][1:])
@@ -257,21 +275,170 @@ def _parse_branch_status_v2_z(
     return head, branch, upstream, ahead, behind
 
 
-def _branch_state(
+def _v1_xy_from_v2(value: bytes) -> bytes:
+    if len(value) != 2 or any(character not in b".MADRCUT" for character in value):
+        raise ValueError("porcelain v2 status has an invalid XY field")
+    return value.replace(b".", b" ")
+
+
+def _validate_v2_submodule(value: bytes) -> None:
+    valid = value == b"N..." or (
+        len(value) == 4
+        and value[:1] == b"S"
+        and value[1] in b".C"
+        and value[2] in b".M"
+        and value[3] in b".U"
+    )
+    if not valid:
+        raise ValueError("porcelain v2 status has an invalid submodule field")
+
+
+def _validate_v2_mode(value: bytes) -> None:
+    if len(value) != 6 or any(character not in b"01234567" for character in value):
+        raise ValueError("porcelain v2 status has an invalid mode")
+
+
+def _validate_v2_oid(value: bytes) -> None:
+    if not 40 <= len(value) <= 64 or any(
+        character not in b"0123456789abcdef" for character in value
+    ):
+        raise ValueError("porcelain v2 status has an invalid object id")
+
+
+def _validate_v2_tracked_fields(
+    fields: list[bytes],
+    *,
+    mode_indexes: tuple[int, ...],
+    oid_indexes: tuple[int, ...],
+) -> bytes:
+    xy = _v1_xy_from_v2(fields[1])
+    _validate_v2_submodule(fields[2])
+    for index in mode_indexes:
+        _validate_v2_mode(fields[index])
+    for index in oid_indexes:
+        _validate_v2_oid(fields[index])
+    return xy
+
+
+def _porcelain_v1_from_v2_z(payload: bytes) -> bytes:
+    """Losslessly render the v1 -z status bytes represented by v2 -z records."""
+    records = payload.split(b"\0")
+    rendered: list[bytes] = []
+    index = 0
+    while index < len(records):
+        record = records[index]
+        index += 1
+        if not record:
+            if any(records[index:]):
+                raise ValueError("porcelain v2 status contains an empty record")
+            continue
+        if record.startswith(b"# "):
+            continue
+        if record.startswith(b"1 "):
+            fields = record.split(b" ", 8)
+            if len(fields) != 9 or not fields[8]:
+                raise ValueError("malformed ordinary porcelain v2 status entry")
+            xy = _validate_v2_tracked_fields(
+                fields,
+                mode_indexes=(3, 4, 5),
+                oid_indexes=(6, 7),
+            )
+            rendered.append(xy + b" " + fields[8] + b"\0")
+            continue
+        if record.startswith(b"2 "):
+            fields = record.split(b" ", 9)
+            if len(fields) != 10 or not fields[9]:
+                raise ValueError("malformed rename/copy porcelain v2 status entry")
+            xy = _validate_v2_tracked_fields(
+                fields,
+                mode_indexes=(3, 4, 5),
+                oid_indexes=(6, 7),
+            )
+            score = fields[8]
+            if (
+                len(score) < 2
+                or score[:1] not in {b"R", b"C"}
+                or not score[1:].isdigit()
+                or score[:1] not in (xy[:1], xy[1:])
+            ):
+                raise ValueError("porcelain v2 status has an invalid rename/copy score")
+            if index >= len(records) or not records[index]:
+                raise ValueError("rename/copy porcelain v2 status is missing its source path")
+            source = records[index]
+            index += 1
+            rendered.append(xy + b" " + fields[9] + b"\0" + source + b"\0")
+            continue
+        if record.startswith(b"u "):
+            fields = record.split(b" ", 10)
+            if len(fields) != 11 or not fields[10]:
+                raise ValueError("malformed unmerged porcelain v2 status entry")
+            xy = _validate_v2_tracked_fields(
+                fields,
+                mode_indexes=(3, 4, 5, 6),
+                oid_indexes=(7, 8, 9),
+            )
+            rendered.append(xy + b" " + fields[10] + b"\0")
+            continue
+        if record.startswith(b"? ") and len(record) > 2:
+            rendered.append(b"?? " + record[2:] + b"\0")
+            continue
+        raise ValueError("unknown porcelain v2 status record")
+
+    result = b"".join(rendered)
+    _parse_porcelain_v1_z(result)
+    return result
+
+
+def _status_and_branch_state(
     path: Path,
-) -> tuple[str | None, str | None, str | None, int | None, int | None, bool]:
-    combined = _git(path, ["status", "--porcelain=v2", "--branch", "--ahead-behind", "-z", "--untracked-files=no"])
+) -> tuple[
+    str | None,
+    str | None,
+    str | None,
+    int | None,
+    int | None,
+    bool,
+    subprocess.CompletedProcess[bytes],
+]:
+    combined = _git_bytes(
+        path,
+        [
+            "status",
+            "--porcelain=v2",
+            "--branch",
+            "--ahead-behind",
+            "-z",
+            "--untracked-files=normal",
+        ],
+    )
     if combined.returncode == 0:
         try:
-            return (*_parse_branch_status_v2_z(combined.stdout), False)
+            branch_state = _parse_branch_status_v2_z(combined.stdout)
+            v1_status = _porcelain_v1_from_v2_z(combined.stdout)
+            status_result = subprocess.CompletedProcess(
+                combined.args,
+                0,
+                v1_status,
+                combined.stderr,
+            )
+            return (*branch_state, False, status_result)
         except ValueError:
             pass
     elif combined.returncode == 124:
-        return None, None, None, None, None, False
+        status_result = _git_bytes(
+            path,
+            ["status", "--porcelain=v1", "-z", "--untracked-files=normal"],
+        )
+        return None, None, None, None, None, False, status_result
 
-    # Preserve the prior per-field behavior when Git emits an unexpected branch
-    # status shape. A timed-out combined probe is not blindly retried.
-    return _branch_state_individually(path)
+    # Preserve the prior probes when combined metadata or status records are
+    # unexpected. A timed-out combined status probe is not blindly retried.
+    branch_state = _branch_state_individually(path)
+    status_result = _git_bytes(
+        path,
+        ["status", "--porcelain=v1", "-z", "--untracked-files=normal"],
+    )
+    return (*branch_state, status_result)
 
 
 def _remote_identity(url: str | None) -> str | None:
@@ -416,10 +583,8 @@ def observe_checkout(
         base["observation_sha256"] = sha256_json(base)
         return base
 
-    head, branch, upstream, ahead, behind, counts_unparseable = _branch_state(path)
-    status_result = _git_bytes(
-        path,
-        ["status", "--porcelain=v1", "-z", "--untracked-files=normal"],
+    head, branch, upstream, ahead, behind, counts_unparseable, status_result = (
+        _status_and_branch_state(path)
     )
     observation_complete = True
     if git_dir is None:
