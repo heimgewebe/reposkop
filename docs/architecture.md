@@ -42,7 +42,8 @@ Dynamic state includes:
 - detached state;
 - upstream and locally available ahead/behind counts;
 - dirty, staged, unstaged and untracked indicators;
-- a digest of porcelain status output;
+- a SHA-256 digest of the byte-exact Porcelain v1 `-z` status representation (the normal
+  observation derives those compatibility bytes from its combined Porcelain v2 probe);
 - active rebase, merge, cherry-pick, revert, bisect or sequencer markers;
 - alternates and `.gitmodules` presence.
 
