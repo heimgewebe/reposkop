@@ -491,6 +491,8 @@ def test_combined_status_preserves_v1_digest_for_dirty_submodule(git_repo, tmp_p
     subprocess.run(["git", "-C", str(git_repo), "commit", "-qam", "add submodule"], check=True)
 
     submodule = git_repo / "sm"
+    subprocess.run(["git", "-C", str(submodule), "config", "user.email", "test@example.invalid"], check=True)
+    subprocess.run(["git", "-C", str(submodule), "config", "user.name", "Reposkop Test"], check=True)
 
     def assert_status_matches_v1():
         expected = _porcelain_v1_status(git_repo)
