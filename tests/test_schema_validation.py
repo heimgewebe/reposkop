@@ -28,4 +28,26 @@ def test_report_rejects_projection_bound_to_other_observation(git_repo):
     )
     result = validate_artifact(value)
     assert result["valid"] is False
-    assert any(error.get("path") == "projection" or error.get("path") == "projection/observation_sha256" for error in result["errors"])
+    assert any(
+        error.get("path") == "projection"
+        or error.get("path") == "projection/observation_sha256"
+        for error in result["errors"]
+    )
+
+
+def test_validation_memoization_is_scoped_to_one_public_call(git_repo):
+    value = build_report(git_repo)
+    assert validate_artifact(value)["valid"] is True
+
+    value["projection"]["observation_sha256"] = "0" * 64
+    value["report_sha256"] = sha256_json(
+        {key: item for key, item in value.items() if key != "report_sha256"}
+    )
+
+    result = validate_artifact(value)
+    assert result["valid"] is False
+    assert any(
+        error.get("path") == "projection"
+        or error.get("path") == "projection/observation_sha256"
+        for error in result["errors"]
+    )

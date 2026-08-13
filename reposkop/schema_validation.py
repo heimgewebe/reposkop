@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from contextvars import ContextVar
 from functools import cache
 from pathlib import Path
 from typing import Any
@@ -45,6 +46,10 @@ _DIGEST_BY_KIND = {
     "reposkop_explicit_inventory": "inventory_sha256",
 }
 
+_VALIDATION_CACHE: ContextVar[dict[int, dict[str, Any]] | None] = ContextVar(
+    "reposkop_validation_cache", default=None
+)
+
 
 @cache
 def _schema(filename: str) -> dict[str, Any]:
@@ -52,6 +57,11 @@ def _schema(filename: str) -> dict[str, Any]:
     value = json.loads(path.read_text(encoding="utf-8"))
     Draft202012Validator.check_schema(value)
     return value
+
+
+@cache
+def _validator(filename: str) -> Draft202012Validator:
+    return Draft202012Validator(_schema(filename))
 
 
 def _version(value: dict[str, Any]) -> int | None:
@@ -93,8 +103,28 @@ def _claim_mismatch_errors(
 
 
 def validate_artifact(value: dict[str, Any]) -> dict[str, Any]:
+    validation_cache = _VALIDATION_CACHE.get()
+    if validation_cache is not None:
+        return _validate_artifact(value, validation_cache)
+
+    validation_cache = {}
+    token = _VALIDATION_CACHE.set(validation_cache)
+    try:
+        return _validate_artifact(value, validation_cache)
+    finally:
+        _VALIDATION_CACHE.reset(token)
+
+
+def _validate_artifact(
+    value: dict[str, Any], validation_cache: dict[int, dict[str, Any]]
+) -> dict[str, Any]:
     if not isinstance(value, dict):
         return {"valid": False, "kind": None, "schema": None, "errors": ["artifact_not_object"]}
+    cache_key = id(value)
+    cached = validation_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     kind = value.get("kind")
     version = _version(value)
     filename = _SCHEMA_BY_KIND_VERSION.get((kind, version))
@@ -106,7 +136,7 @@ def validate_artifact(value: dict[str, Any]) -> dict[str, Any]:
             "errors": ["unsupported_kind_or_schema_version"],
         }
     errors = sorted(
-        Draft202012Validator(_schema(filename)).iter_errors(value),
+        _validator(filename).iter_errors(value),
         key=lambda item: list(item.absolute_path),
     )
     rendered_errors: list[Any] = [
@@ -435,9 +465,11 @@ def validate_artifact(value: dict[str, Any]) -> dict[str, Any]:
         )
         _claim_mismatch_errors(rendered_errors, value, expected_claims)
 
-    return {
+    result = {
         "valid": not rendered_errors,
         "kind": kind,
         "schema": filename,
         "errors": rendered_errors,
     }
+    validation_cache[cache_key] = result
+    return result
