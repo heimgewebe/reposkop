@@ -70,6 +70,19 @@ def derive_shadow_value_set_claims(
             counts[value] += 1
         times.extend(_observation_times(assessment))
     normalized_times = sorted(item for item in times if item)
+    unique_identity_signal_count = counts["unique_identity_signal"]
+    baseline_visible_change_count = counts["baseline_visible_change"]
+    identity_break_count = unique_identity_signal_count + baseline_visible_change_count
+    differential_signal_summary = {
+        "unique_identity_signal_observed": unique_identity_signal_count > 0,
+        "identity_break_assessments": identity_break_count,
+        "unique_identity_signal_assessments": unique_identity_signal_count,
+        "baseline_visible_change_assessments": baseline_visible_change_count,
+        "unique_identity_signal_fraction_of_identity_breaks": {
+            "numerator": unique_identity_signal_count,
+            "denominator": identity_break_count,
+        },
+    }
     return {
         "purpose": purpose,
         "bounds": {
@@ -80,6 +93,7 @@ def derive_shadow_value_set_claims(
         },
         "assessment_sha256s": digests,
         "classification_counts": counts,
+        "differential_signal_summary": differential_signal_summary,
         "observation_window": {
             "earliest_observed_at": normalized_times[0] if normalized_times else None,
             "latest_observed_at": normalized_times[-1] if normalized_times else None,

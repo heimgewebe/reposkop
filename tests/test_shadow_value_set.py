@@ -10,7 +10,11 @@ from reposkop.observation import observe_checkout
 from reposkop.schema_validation import validate_artifact
 from reposkop.shadow import build_shadow_transition
 from reposkop.shadow_value import build_shadow_value_assessment
-from reposkop.shadow_value_set import MAX_ASSESSMENTS, build_shadow_value_set
+from reposkop.shadow_value_set import (
+    MAX_ASSESSMENTS,
+    build_shadow_value_set,
+    derive_shadow_value_set_claims,
+)
 
 
 def _git(path: Path, *arguments: str) -> None:
@@ -70,6 +74,16 @@ def test_set_aggregates_canonical_order_counts_and_window(tmp_path: Path) -> Non
         "no_identity_break": 1,
         "inconclusive": 0,
     }
+    assert value_set["differential_signal_summary"] == {
+        "unique_identity_signal_observed": True,
+        "identity_break_assessments": 1,
+        "unique_identity_signal_assessments": 1,
+        "baseline_visible_change_assessments": 0,
+        "unique_identity_signal_fraction_of_identity_breaks": {
+            "numerator": 1,
+            "denominator": 1,
+        },
+    }
     assert value_set["bounds"] == {
         "max_assessments": MAX_ASSESSMENTS,
         "input_assessments": 2,
@@ -122,3 +136,84 @@ def test_validator_recomputes_counts_even_if_outer_digest_is_recomputed(tmp_path
         for error in validation["errors"]
         if isinstance(error, dict)
     )
+
+def test_derived_signal_summary_is_exact_and_non_floating_point() -> None:
+    assessments = [
+        {"assessment_sha256": "0" * 64, "differential_value": "unique_identity_signal"},
+        {"assessment_sha256": "1" * 64, "differential_value": "baseline_visible_change"},
+        {"assessment_sha256": "2" * 64, "differential_value": "baseline_visible_change"},
+        {"assessment_sha256": "3" * 64, "differential_value": "no_identity_break"},
+    ]
+
+    claims = derive_shadow_value_set_claims(assessments, purpose="summary-test")
+
+    assert claims["differential_signal_summary"] == {
+        "unique_identity_signal_observed": True,
+        "identity_break_assessments": 3,
+        "unique_identity_signal_assessments": 1,
+        "baseline_visible_change_assessments": 2,
+        "unique_identity_signal_fraction_of_identity_breaks": {
+            "numerator": 1,
+            "denominator": 3,
+        },
+    }
+
+
+def test_derived_signal_summary_uses_zero_denominator_when_no_identity_breaks() -> None:
+    claims = derive_shadow_value_set_claims(
+        [{"assessment_sha256": "0" * 64, "differential_value": "no_identity_break"}],
+        purpose="zero-break-test",
+    )
+
+    assert claims["differential_signal_summary"] == {
+        "unique_identity_signal_observed": False,
+        "identity_break_assessments": 0,
+        "unique_identity_signal_assessments": 0,
+        "baseline_visible_change_assessments": 0,
+        "unique_identity_signal_fraction_of_identity_breaks": {
+            "numerator": 0,
+            "denominator": 0,
+        },
+    }
+
+
+def test_validator_recomputes_signal_summary_when_present(tmp_path: Path) -> None:
+    purpose = "summary-tamper-test"
+    repo, before = _seed(
+        tmp_path / "repo",
+        purpose=purpose,
+        remote="git@host-a.invalid:owner/repo.git",
+    )
+    _git(repo, "remote", "set-url", "origin", "git@host-b.invalid:owner/repo.git")
+    assessment = _assessment(before, observe_checkout(repo, purpose=purpose))
+    assert assessment["differential_value"] == "unique_identity_signal"
+    value_set = build_shadow_value_set([assessment], purpose=purpose)
+
+    value_set["differential_signal_summary"]["unique_identity_signal_observed"] = False
+    unsigned = dict(value_set)
+    unsigned.pop("set_sha256")
+    value_set["set_sha256"] = sha256_json(unsigned)
+
+    validation = validate_artifact(value_set)
+    assert validation["valid"] is False
+    assert any(
+        error.get("path") == "differential_signal_summary"
+        and "derived claim" in error.get("message", "")
+        for error in validation["errors"]
+        if isinstance(error, dict)
+    )
+
+
+def test_validator_accepts_legacy_v1_set_without_signal_summary(tmp_path: Path) -> None:
+    purpose = "legacy-v1-test"
+    repo, before = _seed(tmp_path / "repo", purpose=purpose)
+    assessment = _assessment(before, observe_checkout(repo, purpose=purpose))
+    value_set = build_shadow_value_set([assessment], purpose=purpose)
+
+    value_set.pop("differential_signal_summary")
+    unsigned = dict(value_set)
+    unsigned.pop("set_sha256")
+    value_set["set_sha256"] = sha256_json(unsigned)
+
+    assert validate_artifact(value_set)["valid"] is True
+

@@ -72,6 +72,32 @@
       },
       "additionalProperties": false
     },
+    "differential_signal_summary": {
+      "type": "object",
+      "required": [
+        "unique_identity_signal_observed",
+        "identity_break_assessments",
+        "unique_identity_signal_assessments",
+        "baseline_visible_change_assessments",
+        "unique_identity_signal_fraction_of_identity_breaks"
+      ],
+      "properties": {
+        "unique_identity_signal_observed": {"type": "boolean"},
+        "identity_break_assessments": {"type": "integer", "minimum": 0, "maximum": 128},
+        "unique_identity_signal_assessments": {"type": "integer", "minimum": 0, "maximum": 128},
+        "baseline_visible_change_assessments": {"type": "integer", "minimum": 0, "maximum": 128},
+        "unique_identity_signal_fraction_of_identity_breaks": {
+          "type": "object",
+          "required": ["numerator", "denominator"],
+          "properties": {
+            "numerator": {"type": "integer", "minimum": 0, "maximum": 128},
+            "denominator": {"type": "integer", "minimum": 0, "maximum": 128}
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
     "observation_window": {
       "type": "object",
       "required": ["earliest_observed_at", "latest_observed_at"],

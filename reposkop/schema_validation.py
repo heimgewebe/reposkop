@@ -320,6 +320,8 @@ def _validate_artifact(
                     expected_claims = derive_shadow_value_set_claims(
                         assessments, purpose=purpose
                     )
+                    if "differential_signal_summary" not in value:
+                        expected_claims.pop("differential_signal_summary", None)
                     _claim_mismatch_errors(rendered_errors, value, expected_claims)
                     actual_order = [
                         assessment.get("assessment_sha256")
