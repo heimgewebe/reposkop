@@ -82,8 +82,13 @@ reposkop shadow-value-set --purpose real-consumer-shadow \
 
 A set accepts only an explicit list of 1..128 valid assessments whose embedded before/after
 observations carry the same exact purpose. It rejects duplicates, sorts by assessment digest, never
-truncates silently, and reports only classification counts plus the observation window. It does not
-claim that the sample is representative or sufficient and cannot decide retention.
+truncates silently, and reports classification counts plus the observation window. Newly built sets
+also include `differential_signal_summary`: exact counts for identity-break assessments, their unique
+Reposkop signal versus baseline-visible split, an explicit boolean for whether any unique signal was
+observed, and an integer numerator/denominator pair instead of a floating-point rate. The denominator
+is zero when no identity break was observed. The summary is descriptive only: it does not claim that
+the sample is representative or sufficient and cannot decide materiality, consumer outcome or
+retention. Historical schema-v1 sets without the additive summary remain valid.
 
 Aggregate only bounded, purpose-bound shadow receipts. Join that local set with consumer-owned
 outcome evidence to evaluate whether identity breaks were material, whether the simpler baseline
