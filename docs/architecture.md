@@ -53,7 +53,7 @@ These fields belong to transition and continuity comparison, not checkout identi
 
 ### Checkout observation v2
 
-The observation is a canonical, digest-bound statement about one local target at one time. It is authoritative for the material it contains and explicitly does not establish remote freshness or external lifecycle truth.
+The observation is a canonical, digest-bound statement derived during one local observation interval, not an atomic snapshot of mutable Git state. It is authoritative for the material it contains and explicitly does not establish remote freshness or external lifecycle truth. After checkout discovery, Git probes are pinned to the discovered work tree, Git directory and common directory, and that binding is rediscovered at the end. Target, Git-directory and common-directory filesystem identities are also sampled around the remaining local probes. A missing or changed binding or filesystem identity makes the observation incomplete; mutable files such as HEAD, the index, operation markers, alternates and `.gitmodules` can still change between individual probes.
 
 ### Checkout transition v1
 
