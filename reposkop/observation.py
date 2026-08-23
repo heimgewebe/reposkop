@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import os
 import subprocess
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
@@ -69,7 +70,17 @@ _GIT_ENVIRONMENT_OVERRIDES = {
 _GIT_ENVIRONMENT_PREFIXES = ("GIT_CONFIG_KEY_", "GIT_CONFIG_VALUE_")
 
 
-def _git_environment() -> dict[str, str]:
+@dataclass(frozen=True)
+class _GitProbeBinding:
+    work_tree: Path
+    git_dir: Path
+    common_dir: Path
+
+
+_GitProbeTarget = Path | _GitProbeBinding
+
+
+def _git_environment(target: _GitProbeTarget | None = None) -> dict[str, str]:
     env = os.environ.copy()
     for key in tuple(env):
         if key in _GIT_ENVIRONMENT_OVERRIDES or key.startswith(_GIT_ENVIRONMENT_PREFIXES):
@@ -84,16 +95,30 @@ def _git_environment() -> dict[str, str]:
             "LANG": "C",
         }
     )
+    if isinstance(target, _GitProbeBinding):
+        env.update(
+            {
+                "GIT_WORK_TREE": str(target.work_tree),
+                "GIT_DIR": str(target.git_dir),
+                "GIT_COMMON_DIR": str(target.common_dir),
+            }
+        )
     return env
 
 
-def _git_argv(path: Path, arguments: list[str]) -> list[str]:
+def _git_probe_cwd(target: _GitProbeTarget) -> Path:
+    return target.work_tree if isinstance(target, _GitProbeBinding) else target
+
+
+def _git_argv(target: _GitProbeTarget, arguments: list[str]) -> list[str]:
     if tuple(arguments) not in _ALLOWED_GIT_PROBES:
         raise ValueError(f"unsupported Git observation probe: {arguments!r}")
-    return [*_GIT_PREFIX, "-C", str(path), *arguments]
+    return [*_GIT_PREFIX, "-C", str(_git_probe_cwd(target)), *arguments]
 
 
-def _git(path: Path, arguments: list[str], *, timeout: int = 10) -> subprocess.CompletedProcess[str]:
+def _git(
+    path: _GitProbeTarget, arguments: list[str], *, timeout: int = 10
+) -> subprocess.CompletedProcess[str]:
     argv = _git_argv(path, arguments)
     try:
         return subprocess.run(
@@ -104,14 +129,14 @@ def _git(path: Path, arguments: list[str], *, timeout: int = 10) -> subprocess.C
             encoding="utf-8",
             errors="replace",
             timeout=timeout,
-            env=_git_environment(),
+            env=_git_environment(path),
         )
     except subprocess.TimeoutExpired:
         return subprocess.CompletedProcess(argv, 124, "", "git observation probe timed out")
 
 
 def _git_bytes(
-    path: Path,
+    path: _GitProbeTarget,
     arguments: list[str],
     *,
     timeout: int = 10,
@@ -123,7 +148,7 @@ def _git_bytes(
             check=False,
             capture_output=True,
             timeout=timeout,
-            env=_git_environment(),
+            env=_git_environment(path),
         )
     except subprocess.TimeoutExpired:
         return subprocess.CompletedProcess(
@@ -187,7 +212,7 @@ def _git_checkout_paths(
 
 
 def _branch_state_individually(
-    path: Path,
+    path: _GitProbeTarget,
 ) -> tuple[str | None, str | None, str | None, int | None, int | None, bool]:
     head = _text(_git(path, ["rev-parse", "HEAD"]))
     branch = _text(_git(path, ["symbolic-ref", "--quiet", "--short", "HEAD"]))
@@ -390,7 +415,7 @@ def _porcelain_v1_from_v2_z(payload: bytes) -> bytes:
 
 
 def _status_and_branch_state(
-    path: Path,
+    path: _GitProbeTarget,
 ) -> tuple[
     str | None,
     str | None,
@@ -583,8 +608,19 @@ def observe_checkout(
         base["observation_sha256"] = sha256_json(base)
         return base
 
+    initial_target_identity = _stat_identity(toplevel)
+    initial_git_dir_identity = _stat_identity(git_dir)
+    initial_common_dir_identity = _stat_identity(common_dir)
+    probe_target: _GitProbeTarget = path
+    if git_dir is not None and common_dir is not None:
+        probe_target = _GitProbeBinding(
+            work_tree=toplevel,
+            git_dir=git_dir,
+            common_dir=common_dir,
+        )
+
     head, branch, upstream, ahead, behind, counts_unparseable, status_result = (
-        _status_and_branch_state(path)
+        _status_and_branch_state(probe_target)
     )
     observation_complete = True
     if git_dir is None:
@@ -615,7 +651,7 @@ def observe_checkout(
             dirty = staged = unstaged = untracked = None
             status_sha256 = None
             observation_complete = False
-    origin_url = _text(_git(path, ["config", "--get", "remote.origin.url"]))
+    origin_url = _text(_git(probe_target, ["config", "--get", "remote.origin.url"]))
     remote = _remote_identity(origin_url)
     if counts_unparseable:
         base["errors"].append("upstream_counts_unparseable")
@@ -626,16 +662,56 @@ def observe_checkout(
         git_common_dir=common_dir,
         explicit_role=explicit_role,
     )
+    operation_state = _operation_state(git_dir)
+    alternates_configured = bool(
+        common_dir and (common_dir / "objects" / "info" / "alternates").exists()
+    )
+    gitmodules_present = (toplevel / ".gitmodules").is_file()
+
+    recheck_toplevel, recheck_git_dir, recheck_common_dir, _ = _git_checkout_paths(path)
+    if (
+        recheck_toplevel is None
+        or recheck_git_dir is None
+        or recheck_common_dir is None
+    ):
+        base["errors"].append("checkout_binding_recheck_unavailable")
+        observation_complete = False
+    elif (recheck_toplevel, recheck_git_dir, recheck_common_dir) != (
+        toplevel,
+        git_dir,
+        common_dir,
+    ):
+        base["errors"].append("checkout_binding_changed_during_observation")
+        observation_complete = False
+
     target_identity = _stat_identity(toplevel)
     git_dir_identity = _stat_identity(git_dir)
     common_dir_identity = _stat_identity(common_dir)
-    for label, identity in (
-        ("target_identity_unavailable", target_identity),
-        ("git_dir_identity_unavailable", git_dir_identity),
-        ("git_common_dir_identity_unavailable", common_dir_identity),
+    for unavailable_label, changed_label, initial_identity, final_identity in (
+        (
+            "target_identity_unavailable",
+            "target_identity_changed_during_observation",
+            initial_target_identity,
+            target_identity,
+        ),
+        (
+            "git_dir_identity_unavailable",
+            "git_dir_identity_changed_during_observation",
+            initial_git_dir_identity,
+            git_dir_identity,
+        ),
+        (
+            "git_common_dir_identity_unavailable",
+            "git_common_dir_identity_changed_during_observation",
+            initial_common_dir_identity,
+            common_dir_identity,
+        ),
     ):
-        if identity is None:
-            base["errors"].append(label)
+        if initial_identity is None or final_identity is None:
+            base["errors"].append(unavailable_label)
+            observation_complete = False
+        elif initial_identity != final_identity:
+            base["errors"].append(changed_label)
             observation_complete = False
     checkout_identity_material = {
         "target": target_identity,
@@ -679,11 +755,9 @@ def observe_checkout(
                 "untracked": untracked,
                 "status_entry_count": status_entry_count,
                 "status_sha256": status_sha256,
-                "operation_state": _operation_state(git_dir),
-                "alternates_configured": bool(
-                    common_dir and (common_dir / "objects" / "info" / "alternates").exists()
-                ),
-                "gitmodules_present": (toplevel / ".gitmodules").is_file(),
+                "operation_state": operation_state,
+                "alternates_configured": alternates_configured,
+                "gitmodules_present": gitmodules_present,
                 "upstream": upstream,
                 "ahead": ahead,
                 "behind": behind,

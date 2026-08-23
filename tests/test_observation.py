@@ -247,6 +247,237 @@ def test_missing_stat_identity_is_incomplete(git_repo, monkeypatch):
     assert "git_common_dir_identity_unavailable" in result["errors"]
 
 
+def _change_identity_on_second_read(monkeypatch, module, changed_path):
+    real_stat_identity = module._stat_identity
+    reads = 0
+    changed_path = str(changed_path)
+
+    def changing_stat_identity(path):
+        nonlocal reads
+        identity = real_stat_identity(path)
+        if identity is None or identity["path"] != changed_path:
+            return identity
+        reads += 1
+        if reads == 2:
+            return {**identity, "inode": identity["inode"] + 1}
+        return identity
+
+    monkeypatch.setattr(module, "_stat_identity", changing_stat_identity)
+
+
+def test_target_identity_change_during_observation_is_incomplete(git_repo, monkeypatch):
+    import reposkop.observation as module
+    from reposkop.schema_validation import validate_artifact
+
+    _change_identity_on_second_read(monkeypatch, module, git_repo.resolve())
+    result = module.observe_checkout(git_repo)
+
+    assert result["observation_complete"] is False
+    assert "target_identity_changed_during_observation" in result["errors"]
+    assert "git_dir_identity_changed_during_observation" not in result["errors"]
+    assert "git_common_dir_identity_changed_during_observation" not in result["errors"]
+    assert validate_artifact(result)["valid"] is True
+
+
+def test_git_dir_identity_change_during_observation_is_incomplete(
+    git_repo, tmp_path, monkeypatch
+):
+    import subprocess
+    from pathlib import Path
+
+    import reposkop.observation as module
+    from reposkop.schema_validation import validate_artifact
+
+    linked = tmp_path / "linked"
+    subprocess.run(
+        ["git", "-C", str(git_repo), "worktree", "add", "--detach", "-q", str(linked)],
+        check=True,
+    )
+    git_dir = Path(
+        subprocess.run(
+            ["git", "-C", str(linked), "rev-parse", "--absolute-git-dir"],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+    ).resolve()
+
+    _change_identity_on_second_read(monkeypatch, module, git_dir)
+    result = module.observe_checkout(linked)
+
+    assert result["observation_complete"] is False
+    assert "git_dir_identity_changed_during_observation" in result["errors"]
+    assert "target_identity_changed_during_observation" not in result["errors"]
+    assert "git_common_dir_identity_changed_during_observation" not in result["errors"]
+    assert validate_artifact(result)["valid"] is True
+
+
+def _linked_worktree_pair(git_repo, tmp_path):
+    import subprocess
+
+    first = tmp_path / "linked-first"
+    second = tmp_path / "linked-second"
+    subprocess.run(
+        ["git", "-C", str(git_repo), "worktree", "add", "--detach", "-q", str(first)],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(git_repo), "worktree", "add", "--detach", "-q", str(second)],
+        check=True,
+    )
+    (second / "file.txt").write_text("second worktree\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(second), "add", "file.txt"], check=True)
+    subprocess.run(["git", "-C", str(second), "commit", "-qm", "second worktree"], check=True)
+    return first, second
+
+
+def _git_head(path):
+    import subprocess
+
+    return subprocess.run(
+        ["git", "-C", str(path), "rev-parse", "HEAD"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+
+
+def test_persistent_linked_worktree_pointer_rewrite_is_bound_and_incomplete(
+    git_repo, tmp_path, monkeypatch
+):
+    import reposkop.observation as module
+    from reposkop.schema_validation import validate_artifact
+
+    first, second = _linked_worktree_pair(git_repo, tmp_path)
+    first_marker = first / ".git"
+    original_marker = first_marker.read_text(encoding="utf-8")
+    replacement_marker = (second / ".git").read_text(encoding="utf-8")
+    expected_head = _git_head(first)
+    assert expected_head != _git_head(second)
+
+    real_status = module._status_and_branch_state
+
+    def rewrite_pointer(target):
+        assert isinstance(target, module._GitProbeBinding)
+        first_marker.write_text(replacement_marker, encoding="utf-8")
+        return real_status(target)
+
+    monkeypatch.setattr(module, "_status_and_branch_state", rewrite_pointer)
+    try:
+        result = module.observe_checkout(first)
+    finally:
+        first_marker.write_text(original_marker, encoding="utf-8")
+
+    assert result["git"]["head"] == expected_head
+    assert result["observation_complete"] is False
+    assert result["errors"].count("checkout_binding_changed_during_observation") == 1
+    assert validate_artifact(result)["valid"] is True
+
+
+def test_transient_linked_worktree_pointer_rewrite_cannot_redirect_bound_probe(
+    git_repo, tmp_path, monkeypatch
+):
+    import reposkop.observation as module
+    from reposkop.schema_validation import validate_artifact
+
+    first, second = _linked_worktree_pair(git_repo, tmp_path)
+    first_marker = first / ".git"
+    original_marker = first_marker.read_text(encoding="utf-8")
+    replacement_marker = (second / ".git").read_text(encoding="utf-8")
+    expected_head = _git_head(first)
+    assert expected_head != _git_head(second)
+
+    real_status = module._status_and_branch_state
+
+    def rewrite_pointer_transiently(target):
+        assert isinstance(target, module._GitProbeBinding)
+        first_marker.write_text(replacement_marker, encoding="utf-8")
+        try:
+            return real_status(target)
+        finally:
+            first_marker.write_text(original_marker, encoding="utf-8")
+
+    monkeypatch.setattr(module, "_status_and_branch_state", rewrite_pointer_transiently)
+    result = module.observe_checkout(first)
+
+    assert result["git"]["head"] == expected_head
+    assert result["observation_complete"] is True
+    assert "checkout_binding_changed_during_observation" not in result["errors"]
+    assert validate_artifact(result)["valid"] is True
+
+
+def test_persistent_common_dir_rewrite_is_bound_and_incomplete(
+    git_repo, tmp_path, monkeypatch
+):
+    import os
+    import subprocess
+    from pathlib import Path
+
+    import reposkop.observation as module
+    from reposkop.schema_validation import validate_artifact
+
+    linked = tmp_path / "linked-common"
+    alternate = tmp_path / "alternate"
+    subprocess.run(
+        ["git", "-C", str(git_repo), "worktree", "add", "--detach", "-q", str(linked)],
+        check=True,
+    )
+    subprocess.run(["git", "clone", "-q", str(git_repo), str(alternate)], check=True)
+    original_remote = "https://original.example.invalid/owner/repo.git"
+    replacement_remote = "https://replacement.example.invalid/owner/repo.git"
+    subprocess.run(
+        ["git", "-C", str(git_repo), "remote", "add", "origin", original_remote],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(alternate), "remote", "set-url", "origin", replacement_remote],
+        check=True,
+    )
+    expected_head = _git_head(linked)
+    git_dir = Path(
+        subprocess.run(
+            ["git", "-C", str(linked), "rev-parse", "--absolute-git-dir"],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+    ).resolve()
+    original_common = Path(
+        subprocess.run(
+            ["git", "-C", str(linked), "rev-parse", "--git-common-dir"],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+    ).resolve()
+    replacement_common = (alternate / ".git").resolve()
+    commondir = git_dir / "commondir"
+    original_commondir = commondir.read_text(encoding="utf-8")
+    replacement_value = os.path.relpath(replacement_common, start=git_dir) + "\n"
+
+    real_status = module._status_and_branch_state
+
+    def rewrite_common_dir(target):
+        assert isinstance(target, module._GitProbeBinding)
+        assert target.common_dir == original_common
+        commondir.write_text(replacement_value, encoding="utf-8")
+        return real_status(target)
+
+    monkeypatch.setattr(module, "_status_and_branch_state", rewrite_common_dir)
+    try:
+        result = module.observe_checkout(linked)
+    finally:
+        commondir.write_text(original_commondir, encoding="utf-8")
+
+    assert result["git"]["head"] == expected_head
+    assert result["identities"]["git_common_dir"] == str(original_common)
+    assert result["identities"]["remote"] == "original.example.invalid/owner/repo"
+    assert result["identities"]["remote"] != "replacement.example.invalid/owner/repo"
+    assert result["observation_complete"] is False
+    assert result["errors"].count("checkout_binding_changed_during_observation") == 1
+    assert validate_artifact(result)["valid"] is True
+
+
 def test_git_timeout_is_reported_without_crash(git_repo, monkeypatch):
     import subprocess
 
@@ -289,7 +520,7 @@ def test_checkout_path_probes_are_batched_on_normal_checkout(git_repo, monkeypat
         argv[-4:]
         == ["rev-parse", "--show-toplevel", "--absolute-git-dir", "--git-common-dir"]
         for argv in calls
-    ) == 1
+    ) == 2
     assert not any(argv[-2:] == ["rev-parse", "--show-toplevel"] for argv in calls)
     assert not any(
         argv[-3:] == ["rev-parse", "--absolute-git-dir", "--git-common-dir"]
@@ -430,7 +661,7 @@ def test_status_and_branch_state_probe_is_batched_on_normal_checkout(git_repo, m
         argv[-4:] == ["rev-list", "--left-right", "--count", "HEAD...@{upstream}"]
         for argv in calls
     )
-    assert len(calls) == 3
+    assert len(calls) == 4
 
 
 def test_combined_status_preserves_v1_digest_and_all_dirty_indicators(git_repo):
