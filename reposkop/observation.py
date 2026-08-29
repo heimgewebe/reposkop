@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import stat
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -11,6 +12,10 @@ from urllib.parse import urlsplit
 from .canonical import sha256_json
 from .roles import classify_role
 from .timeutil import utc_now
+
+_CONFIG_KEYS_PATTERN = r"^(remote\.origin\.url|core\.sparsecheckout|core\.sparsecheckoutcone)$"
+
+_SPARSE_CHECKOUT_DEFINITION_MAX_BYTES = 1024 * 1024
 
 _ALLOWED_GIT_PROBES = {
     ("rev-parse", "--show-toplevel"),
@@ -28,8 +33,9 @@ _ALLOWED_GIT_PROBES = {
         "-z",
         "--untracked-files=normal",
     ),
-    ("config", "--get", "remote.origin.url"),
+    ("config", "--null", "--get-regexp", _CONFIG_KEYS_PATTERN),
     ("rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"),
+    ("rev-parse", "--git-path", "info/sparse-checkout"),
     ("rev-list", "--left-right", "--count", "HEAD...@{upstream}"),
 }
 
@@ -164,6 +170,111 @@ def _text(result: subprocess.CompletedProcess[str]) -> str | None:
         return None
     value = result.stdout.strip()
     return value or None
+
+
+def _git_config_values(
+    path: _GitProbeTarget,
+) -> tuple[dict[str, str], str | None]:
+    result = _git(path, ["config", "--null", "--get-regexp", _CONFIG_KEYS_PATTERN])
+    if result.returncode == 1:
+        return {}, None
+    if result.returncode != 0:
+        return {}, "git_config_probe_failed"
+
+    values: dict[str, str] = {}
+    for record in result.stdout.split("\0"):
+        if not record:
+            continue
+        key, separator, value = record.partition("\n")
+        if not separator or not key:
+            return {}, "git_config_probe_unparseable"
+        values[key.lower()] = value
+    return values, None
+
+
+def _config_bool(
+    values: dict[str, str],
+    key: str,
+) -> tuple[bool | None, str | None]:
+    value = values.get(key.lower())
+    if value is None:
+        return False, None
+    normalized = value.strip().lower()
+    if normalized in {"", "true", "yes", "on", "1"}:
+        return True, None
+    if normalized in {"false", "no", "off", "0"}:
+        return False, None
+    return None, "sparse_checkout_config_unparseable"
+
+
+def _sha256_file(
+    path: Path,
+    *,
+    max_bytes: int = _SPARSE_CHECKOUT_DEFINITION_MAX_BYTES,
+) -> str:
+    before = path.lstat()
+    if not stat.S_ISREG(before.st_mode):
+        raise OSError("file is not regular")
+    if before.st_size > max_bytes:
+        raise OSError("file exceeds size limit")
+
+    flags = os.O_RDONLY
+    for flag_name in ("O_CLOEXEC", "O_NONBLOCK", "O_NOFOLLOW"):
+        flags |= getattr(os, flag_name, 0)
+    fd = os.open(path, flags)
+    try:
+        opened = os.fstat(fd)
+        if not stat.S_ISREG(opened.st_mode):
+            raise OSError("opened file is not regular")
+        if (opened.st_dev, opened.st_ino) != (before.st_dev, before.st_ino):
+            raise OSError("file changed while opening")
+        if opened.st_size > max_bytes:
+            raise OSError("file exceeds size limit")
+
+        digest = hashlib.sha256()
+        total = 0
+        while True:
+            chunk = os.read(fd, min(65536, max_bytes + 1 - total))
+            if not chunk:
+                return digest.hexdigest()
+            total += len(chunk)
+            if total > max_bytes:
+                raise OSError("file exceeds size limit")
+            digest.update(chunk)
+    finally:
+        os.close(fd)
+
+
+def _sparse_checkout_state(
+    path: _GitProbeTarget,
+    config_values: dict[str, str],
+) -> tuple[dict[str, Any] | None, str | None]:
+    enabled, error = _config_bool(config_values, "core.sparsecheckout")
+    if error is not None or enabled is None:
+        return None, error or "sparse_checkout_config_unavailable"
+    if not enabled:
+        return {
+            "enabled": False,
+            "cone_mode": None,
+            "definition_sha256": None,
+        }, None
+
+    cone_mode, error = _config_bool(config_values, "core.sparsecheckoutcone")
+    if error is not None or cone_mode is None:
+        return None, error or "sparse_checkout_config_unavailable"
+    definition = _text(_git(path, ["rev-parse", "--git-path", "info/sparse-checkout"]))
+    definition_path = _resolve_git_path(_git_probe_cwd(path), definition)
+    if definition_path is None:
+        return None, "sparse_checkout_definition_unavailable"
+    try:
+        definition_sha256 = _sha256_file(definition_path)
+    except OSError:
+        return None, "sparse_checkout_definition_unavailable"
+    return {
+        "enabled": True,
+        "cone_mode": cone_mode,
+        "definition_sha256": definition_sha256,
+    }, None
 
 
 def _resolve_git_path(base: Path, value: str | None) -> Path | None:
@@ -651,7 +762,19 @@ def observe_checkout(
             dirty = staged = unstaged = untracked = None
             status_sha256 = None
             observation_complete = False
-    origin_url = _text(_git(probe_target, ["config", "--get", "remote.origin.url"]))
+    config_values, config_error = _git_config_values(probe_target)
+    if config_error is not None:
+        base["errors"].append(config_error)
+        observation_complete = False
+        sparse_checkout = None
+    else:
+        sparse_checkout, sparse_checkout_error = _sparse_checkout_state(
+            probe_target, config_values
+        )
+        if sparse_checkout_error is not None:
+            base["errors"].append(sparse_checkout_error)
+            observation_complete = False
+    origin_url = config_values.get("remote.origin.url") if config_error is None else None
     remote = _remote_identity(origin_url)
     if counts_unparseable:
         base["errors"].append("upstream_counts_unparseable")
@@ -758,6 +881,7 @@ def observe_checkout(
                 "operation_state": operation_state,
                 "alternates_configured": alternates_configured,
                 "gitmodules_present": gitmodules_present,
+                "sparse_checkout": sparse_checkout,
                 "upstream": upstream,
                 "ahead": ahead,
                 "behind": behind,

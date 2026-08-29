@@ -113,7 +113,8 @@
         "status_sha256": {"$ref": "#/$defs/change"},
         "operation_state": {"$ref": "#/$defs/change"},
         "alternates_configured": {"$ref": "#/$defs/change"},
-        "gitmodules_present": {"$ref": "#/$defs/change"}
+        "gitmodules_present": {"$ref": "#/$defs/change"},
+        "sparse_checkout": {"$ref": "#/$defs/change"}
       },
       "additionalProperties": false
     },

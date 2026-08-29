@@ -153,6 +153,44 @@
         },
         "alternates_configured": {"type": "boolean"},
         "gitmodules_present": {"type": "boolean"},
+        "sparse_checkout": {
+          "type": ["object", "null"],
+          "required": ["enabled", "cone_mode", "definition_sha256"],
+          "properties": {
+            "enabled": {"type": "boolean"},
+            "cone_mode": {"type": ["boolean", "null"]},
+            "definition_sha256": {"$ref": "#/$defs/nullableSha256"}
+          },
+          "additionalProperties": false,
+          "allOf": [
+            {
+              "if": {
+                "type": "object",
+                "properties": {"enabled": {"const": false}},
+                "required": ["enabled"]
+              },
+              "then": {
+                "properties": {
+                  "cone_mode": {"type": "null"},
+                  "definition_sha256": {"type": "null"}
+                }
+              }
+            },
+            {
+              "if": {
+                "type": "object",
+                "properties": {"enabled": {"const": true}},
+                "required": ["enabled"]
+              },
+              "then": {
+                "properties": {
+                  "cone_mode": {"type": "boolean"},
+                  "definition_sha256": {"$ref": "#/$defs/sha256"}
+                }
+              }
+            }
+          ]
+        },
         "upstream": {"type": ["string", "null"]},
         "ahead": {"type": ["integer", "null"], "minimum": 0},
         "behind": {"type": ["integer", "null"], "minimum": 0},

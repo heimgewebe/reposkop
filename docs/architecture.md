@@ -45,7 +45,8 @@ Dynamic state includes:
 - a SHA-256 digest of the byte-exact Porcelain v1 `-z` status representation (the normal
   observation derives those compatibility bytes from its combined Porcelain v2 probe);
 - active rebase, merge, cherry-pick, revert, bisect or sequencer markers;
-- alternates and `.gitmodules` presence.
+- alternates and `.gitmodules` presence;
+- Sparse-Checkout enablement, cone mode and a SHA-256 digest of the effective definition file. The definition must be a local regular file no larger than 1 MiB; special, symlinked or oversized definitions make the observation incomplete.
 
 These fields belong to transition and continuity comparison, not checkout identity.
 
@@ -53,7 +54,7 @@ These fields belong to transition and continuity comparison, not checkout identi
 
 ### Checkout observation v2
 
-The observation is a canonical, digest-bound statement derived during one local observation interval, not an atomic snapshot of mutable Git state. It is authoritative for the material it contains and explicitly does not establish remote freshness or external lifecycle truth. After checkout discovery, Git probes are pinned to the discovered work tree, Git directory and common directory, and that binding is rediscovered at the end. Target, Git-directory and common-directory filesystem identities are also sampled around the remaining local probes. A missing or changed binding or filesystem identity makes the observation incomplete; mutable files such as HEAD, the index, operation markers, alternates and `.gitmodules` can still change between individual probes.
+The observation is a canonical, digest-bound statement derived during one local observation interval, not an atomic snapshot of mutable Git state. It is authoritative for the material it contains and explicitly does not establish remote freshness or external lifecycle truth. After checkout discovery, Git probes are pinned to the discovered work tree, Git directory and common directory, and that binding is rediscovered at the end. Target, Git-directory and common-directory filesystem identities are also sampled around the remaining local probes. A missing or changed binding or filesystem identity makes the observation incomplete; mutable files such as HEAD, the index, operation markers, alternates, `.gitmodules` and the Sparse-Checkout definition can still change between individual probes.
 
 ### Checkout transition v1
 
