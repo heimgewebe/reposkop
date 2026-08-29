@@ -24,6 +24,9 @@ STATE_FIELDS = (
     ("alternates_configured", "continuity.alternates_changed"),
     ("gitmodules_present", "continuity.gitmodules_changed"),
 )
+OPTIONAL_STATE_FIELDS = (
+    ("sparse_checkout", "continuity.sparse_checkout_changed"),
+)
 
 
 def _field_change(before: dict[str, Any], after: dict[str, Any], field: str) -> dict[str, Any]:
@@ -82,6 +85,13 @@ def derive_transition_claims(
     after_git = after.get("git", {}) if isinstance(after, dict) else {}
     state_changes: dict[str, Any] = {}
     for field, code in STATE_FIELDS:
+        change = _field_change(before_git, after_git, field)
+        state_changes[field] = change
+        if change["changed"]:
+            reason_codes.append(code)
+    for field, code in OPTIONAL_STATE_FIELDS:
+        if field not in before_git or field not in after_git:
+            continue
         change = _field_change(before_git, after_git, field)
         state_changes[field] = change
         if change["changed"]:

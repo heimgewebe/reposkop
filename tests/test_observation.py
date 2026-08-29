@@ -965,3 +965,52 @@ def test_combined_status_timeout_is_not_blindly_retried(git_repo, monkeypatch):
     assert result["git"]["behind"] is None
     assert result["git"]["dirty"] is False
     assert result["git"]["status_sha256"] == hashlib.sha256(expected).hexdigest()
+
+
+def test_sparse_checkout_definition_is_observed_without_extra_normal_probe_cost(git_repo, monkeypatch):
+    import subprocess
+
+    import reposkop.observation as module
+
+    (git_repo / "keep").mkdir()
+    (git_repo / "drop").mkdir()
+    (git_repo / "keep" / "a.txt").write_text("keep\n", encoding="utf-8")
+    (git_repo / "drop" / "b.txt").write_text("drop\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(git_repo), "add", "keep", "drop"], check=True)
+    subprocess.run(["git", "-C", str(git_repo), "commit", "-qm", "add sparse fixtures"], check=True)
+
+    real_run = module.subprocess.run
+    normal_calls = []
+
+    def traced_run(*args, **kwargs):
+        normal_calls.append(args[0])
+        return real_run(*args, **kwargs)
+
+    monkeypatch.setattr(module.subprocess, "run", traced_run)
+    normal = module.observe_checkout(git_repo, purpose="test")
+    monkeypatch.setattr(module.subprocess, "run", real_run)
+
+    assert normal["git"]["sparse_checkout"] == {
+        "enabled": False,
+        "cone_mode": None,
+        "definition_sha256": None,
+    }
+    assert len(normal_calls) == 4
+
+    subprocess.run(["git", "-C", str(git_repo), "sparse-checkout", "init", "--cone"], check=True)
+    subprocess.run(["git", "-C", str(git_repo), "sparse-checkout", "set", "keep"], check=True)
+    keep = module.observe_checkout(git_repo, purpose="test")
+    subprocess.run(["git", "-C", str(git_repo), "sparse-checkout", "set", "drop"], check=True)
+    drop = module.observe_checkout(git_repo, purpose="test")
+
+    assert keep["observation_complete"] is True
+    assert drop["observation_complete"] is True
+    assert keep["git"]["head"] == drop["git"]["head"]
+    assert keep["git"]["dirty"] is False
+    assert drop["git"]["dirty"] is False
+    assert keep["git"]["status_sha256"] == drop["git"]["status_sha256"]
+    assert keep["identities"]["checkout_identity_sha256"] == drop["identities"]["checkout_identity_sha256"]
+    assert keep["git"]["sparse_checkout"]["enabled"] is True
+    assert keep["git"]["sparse_checkout"]["cone_mode"] is True
+    assert len(keep["git"]["sparse_checkout"]["definition_sha256"]) == 64
+    assert keep["git"]["sparse_checkout"]["definition_sha256"] != drop["git"]["sparse_checkout"]["definition_sha256"]

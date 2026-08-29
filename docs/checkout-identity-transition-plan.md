@@ -14,6 +14,7 @@ Reposkop must not become a second task store, GitHub observer, effect engine or 
 - filesystem device and inode binding for target, Git directory and common directory;
 - stable repository and checkout identity digests;
 - dirty-state digest and active Git operation markers;
+- Sparse-Checkout enablement, cone mode and definition digest as local transition state;
 - checkout transition artifact with stable reason and anomaly codes;
 - checkout continuity classification;
 - self-contained operation-agnostic shadow transition summaries with recomputable claims;
@@ -104,7 +105,6 @@ These are useful but not required for the initial contract:
 
 - ancestry-aware fast-forward, rewind and divergence classification;
 - submodule identity digests;
-- sparse-checkout definition digest;
 - separate index and working-tree content digests;
 - remote repository numeric identity supplied by GitHub evidence;
 - cross-host checkout identity envelopes.

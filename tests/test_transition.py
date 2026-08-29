@@ -169,3 +169,43 @@ def test_actual_incomplete_git_probe_remains_fail_closed(git_repo, monkeypatch):
         "continuity.status_changed",
         "evidence.after_incomplete",
     ]
+
+
+def test_sparse_checkout_definition_change_is_explainable_drift(git_repo):
+    (git_repo / "keep").mkdir()
+    (git_repo / "drop").mkdir()
+    (git_repo / "keep" / "a.txt").write_text("keep\n", encoding="utf-8")
+    (git_repo / "drop" / "b.txt").write_text("drop\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(git_repo), "add", "keep", "drop"], check=True)
+    subprocess.run(["git", "-C", str(git_repo), "commit", "-qm", "add sparse fixtures"], check=True)
+    subprocess.run(["git", "-C", str(git_repo), "sparse-checkout", "init", "--cone"], check=True)
+    subprocess.run(["git", "-C", str(git_repo), "sparse-checkout", "set", "keep"], check=True)
+    before = observe_checkout(git_repo, purpose="resume")
+    subprocess.run(["git", "-C", str(git_repo), "sparse-checkout", "set", "drop"], check=True)
+    after = observe_checkout(git_repo, purpose="resume")
+
+    transition = build_transition(before, after)
+    continuity = build_continuity(transition)
+
+    assert before["git"]["head"] == after["git"]["head"]
+    assert before["git"]["status_sha256"] == after["git"]["status_sha256"]
+    assert transition["identity_continuity"] == "same_checkout"
+    assert transition["state_changes"]["sparse_checkout"]["changed"] is True
+    assert "continuity.sparse_checkout_changed" in transition["reason_codes"]
+    assert continuity["state"] == "explainable_drift"
+    assert validate_artifact(transition)["valid"] is True
+    assert validate_artifact(continuity)["valid"] is True
+
+
+def test_legacy_observation_v2_without_sparse_checkout_remains_compatible(git_repo):
+    current = observe_checkout(git_repo, purpose="resume")
+    legacy = deepcopy(current)
+    legacy["git"].pop("sparse_checkout")
+    legacy = _rehash(legacy, "observation_sha256")
+
+    assert validate_artifact(legacy)["valid"] is True
+    transition = build_transition(legacy, current)
+    assert "sparse_checkout" not in transition["state_changes"]
+    assert "continuity.sparse_checkout_changed" not in transition["reason_codes"]
+    assert build_continuity(transition)["state"] == "intact"
+    assert validate_artifact(transition)["valid"] is True
