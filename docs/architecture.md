@@ -46,7 +46,7 @@ Dynamic state includes:
   observation derives those compatibility bytes from its combined Porcelain v2 probe);
 - active rebase, merge, cherry-pick, revert, bisect or sequencer markers;
 - alternates and `.gitmodules` presence;
-- Sparse-Checkout enablement, cone mode and a SHA-256 digest of the effective definition file.
+- Sparse-Checkout enablement, cone mode and a SHA-256 digest of the effective definition file. The definition must be a local regular file no larger than 1 MiB; special, symlinked or oversized definitions make the observation incomplete.
 
 These fields belong to transition and continuity comparison, not checkout identity.
 

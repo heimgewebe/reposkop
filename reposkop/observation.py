@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import stat
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -13,6 +14,8 @@ from .roles import classify_role
 from .timeutil import utc_now
 
 _CONFIG_KEYS_PATTERN = r"^(remote\.origin\.url|core\.sparsecheckout|core\.sparsecheckoutcone)$"
+
+_SPARSE_CHECKOUT_DEFINITION_MAX_BYTES = 1024 * 1024
 
 _ALLOWED_GIT_PROBES = {
     ("rev-parse", "--show-toplevel"),
@@ -204,12 +207,42 @@ def _config_bool(
     return None, "sparse_checkout_config_unparseable"
 
 
-def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+def _sha256_file(
+    path: Path,
+    *,
+    max_bytes: int = _SPARSE_CHECKOUT_DEFINITION_MAX_BYTES,
+) -> str:
+    before = path.lstat()
+    if not stat.S_ISREG(before.st_mode):
+        raise OSError("file is not regular")
+    if before.st_size > max_bytes:
+        raise OSError("file exceeds size limit")
+
+    flags = os.O_RDONLY
+    for flag_name in ("O_CLOEXEC", "O_NONBLOCK", "O_NOFOLLOW"):
+        flags |= getattr(os, flag_name, 0)
+    fd = os.open(path, flags)
+    try:
+        opened = os.fstat(fd)
+        if not stat.S_ISREG(opened.st_mode):
+            raise OSError("opened file is not regular")
+        if (opened.st_dev, opened.st_ino) != (before.st_dev, before.st_ino):
+            raise OSError("file changed while opening")
+        if opened.st_size > max_bytes:
+            raise OSError("file exceeds size limit")
+
+        digest = hashlib.sha256()
+        total = 0
+        while True:
+            chunk = os.read(fd, min(65536, max_bytes + 1 - total))
+            if not chunk:
+                return digest.hexdigest()
+            total += len(chunk)
+            if total > max_bytes:
+                raise OSError("file exceeds size limit")
             digest.update(chunk)
-    return digest.hexdigest()
+    finally:
+        os.close(fd)
 
 
 def _sparse_checkout_state(

@@ -1014,3 +1014,28 @@ def test_sparse_checkout_definition_is_observed_without_extra_normal_probe_cost(
     assert keep["git"]["sparse_checkout"]["cone_mode"] is True
     assert len(keep["git"]["sparse_checkout"]["definition_sha256"]) == 64
     assert keep["git"]["sparse_checkout"]["definition_sha256"] != drop["git"]["sparse_checkout"]["definition_sha256"]
+
+
+def test_sparse_checkout_definition_hash_rejects_special_and_oversized_files(tmp_path):
+    import os
+
+    import pytest
+
+    import reposkop.observation as module
+
+    fifo = tmp_path / "sparse-fifo"
+    os.mkfifo(fifo)
+    with pytest.raises(OSError, match="not regular"):
+        module._sha256_file(fifo)
+
+    target = tmp_path / "sparse-target"
+    target.write_text("/keep/\n", encoding="utf-8")
+    link = tmp_path / "sparse-link"
+    link.symlink_to(target)
+    with pytest.raises(OSError, match="not regular"):
+        module._sha256_file(link)
+
+    oversized = tmp_path / "sparse-oversized"
+    oversized.write_bytes(b"x" * (module._SPARSE_CHECKOUT_DEFINITION_MAX_BYTES + 1))
+    with pytest.raises(OSError, match="size limit"):
+        module._sha256_file(oversized)
