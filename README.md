@@ -127,25 +127,33 @@ Read-only repository inspection does not require this lifecycle.
 
 ## Standalone runtime artifact
 
-The Grabowski consumer may use a single-file executable that contains only the committed `reposkop/`
-package from one exact Git revision. Build it with:
+The Grabowski consumer may use a single-file launcher artifact that contains the committed `reposkop/`
+package from one exact Git revision. Build it with the Python interpreter that will execute the
+installed artifact:
 
 ```text
-python3 scripts/build_self_extracting.py --revision <commit> --output <artifact-path>
+<python> scripts/build_self_extracting.py --revision <commit> --output <artifact-path>
 ```
 
 The builder reads package blobs from Git's object database rather than the working tree, fixes archive
 metadata for deterministic output, and reports the source commit, source tree, payload digest and
-final artifact digest. Building the same revision twice on the same supported runtime therefore
+final artifact digest. Building the same revision twice with the same supported interpreter therefore
 produces byte-identical output, even when the local working tree has unrelated or newer dirty files.
 
-The generated executable verifies its embedded payload and every packaged file before importing
-Reposkop. Installing or replacing a host executable is deliberately not part of the builder: Grabowski
-retains effect authority and must bind the current destination identity, perform the atomic install,
-and read back the installed source and artifact digest.
+Third-party runtime dependencies are deliberately not copied into the launcher. Instead, the builder
+fails closed unless the selected interpreter can import Reposkop's runtime dependency (`jsonschema`),
+binds that exact absolute interpreter path into the shebang, and records the interpreter, Python
+version and runtime dependency names in its manifest and receipt. A host cutover must therefore build
+through the final runtime interpreter rather than through a temporary CI or virtualenv interpreter.
 
-`make deploy-check` includes an executable build/version smoke test so packaging drift fails CI before
-a runtime cutover.
+The generated executable verifies its embedded payload and every packaged Reposkop file before
+importing it. Installing or replacing a host executable is deliberately not part of the builder:
+Grabowski retains effect authority and must bind the current destination identity, verify the target
+runtime interpreter, perform the atomic install, and read back the installed source and artifact
+digest.
+
+`make deploy-check` includes an executable build/version smoke test through the configured `PYTHON`
+interpreter so interpreter/dependency drift fails CI before a runtime cutover.
 
 ## Validation
 

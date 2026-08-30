@@ -9,7 +9,6 @@ from pathlib import Path
 
 from reposkop import __version__
 
-
 ROOT = Path(__file__).resolve().parents[1]
 BUILDER = ROOT / "scripts" / "build_self_extracting.py"
 
@@ -62,11 +61,34 @@ def test_build_is_reproducible_and_source_bound(tmp_path: Path) -> None:
     assert first_receipt["source_repository"] == "heimgewebe/reposkop"
     assert first_receipt["artifact_kind"] == "reposkop-self-extracting-python"
     assert first_receipt["artifact_sha256"] == hashlib.sha256(first_bytes).hexdigest()
+    assert first_receipt["runtime_interpreter"] == sys.executable
+    assert first_receipt["runtime_dependencies"] == ["jsonschema"]
+    assert first_bytes.startswith(f"#!{sys.executable}\n".encode())
     assert stat.S_IMODE(first.stat().st_mode) == 0o755
 
     version = _run(str(first), "--version")
     assert version.returncode == 0, version.stderr
     assert version.stdout.strip() == f"reposkop {__version__}"
+
+
+def test_build_fails_closed_when_runtime_dependency_is_unimportable(tmp_path: Path) -> None:
+    output = tmp_path / "reposkop"
+    result = _run(
+        sys.executable,
+        "-I",
+        "-S",
+        str(BUILDER),
+        "--repo",
+        str(ROOT),
+        "--revision",
+        "HEAD",
+        "--output",
+        str(output),
+    )
+
+    assert result.returncode == 2
+    assert "cannot import runtime dependencies: jsonschema (ModuleNotFoundError)" in result.stderr
+    assert not output.exists()
 
 
 def test_built_artifact_exposes_current_observation_contract(tmp_path: Path) -> None:

@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import base64
 import hashlib
+import importlib
 import io
 import json
 import os
@@ -19,6 +20,8 @@ SOURCE_REPOSITORY = "heimgewebe/reposkop"
 PACKAGE_PREFIX = "reposkop/"
 ENTRYPOINT = "reposkop.cli:main"
 ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
+RUNTIME_DEPENDENCIES = ("jsonschema",)
+_MAX_SHEBANG_BYTES = 127
 _VERSION_PATTERN = re.compile(rb"(?m)^__version__\s*=\s*['\"]([^'\"]+)['\"]\s*$")
 
 
@@ -52,6 +55,30 @@ def _object_id(repo: Path, revision: str, suffix: str) -> str:
     if not re.fullmatch(r"[0-9a-f]{40,64}", value):
         raise BuildError(f"unexpected Git object id: {value!r}")
     return value
+
+
+def _runtime_binding() -> tuple[str, str]:
+    interpreter = sys.executable
+    if not interpreter or not Path(interpreter).is_absolute():
+        raise BuildError("builder Python interpreter must have an absolute executable path")
+    if "\n" in interpreter or "\r" in interpreter:
+        raise BuildError("builder Python interpreter path is not safe for a shebang")
+    shebang = f"#!{interpreter}\n".encode()
+    if len(shebang) > _MAX_SHEBANG_BYTES:
+        raise BuildError("builder Python interpreter path is too long for a portable shebang")
+    unavailable: list[str] = []
+    for name in RUNTIME_DEPENDENCIES:
+        try:
+            importlib.import_module(name)
+        except ImportError as exc:
+            unavailable.append(f"{name} ({type(exc).__name__})")
+    if unavailable:
+        raise BuildError(
+            "builder Python interpreter cannot import runtime dependencies: "
+            + ", ".join(unavailable)
+        )
+    runtime_python = ".".join(str(value) for value in sys.version_info[:3])
+    return interpreter, runtime_python
 
 
 def _package_blobs(repo: Path, commit: str) -> list[tuple[str, str, bytes]]:
@@ -112,11 +139,16 @@ def _manifest(
     commit: str,
     source_tree: str,
     version: str,
+    runtime_interpreter: str,
+    runtime_python: str,
     entries: list[tuple[str, str, bytes]],
 ) -> dict[str, Any]:
     return {
         "artifact_kind": "reposkop-self-extracting-python",
         "entrypoint": ENTRYPOINT,
+        "runtime_dependencies": list(RUNTIME_DEPENDENCIES),
+        "runtime_interpreter": runtime_interpreter,
+        "runtime_python": runtime_python,
         "schema_version": 1,
         "source_commit": commit,
         "source_repository": SOURCE_REPOSITORY,
@@ -180,6 +212,7 @@ def _render_executable(
     *,
     commit: str,
     version: str,
+    runtime_interpreter: str,
     manifest: dict[str, Any],
     payload: bytes,
 ) -> bytes:
@@ -189,7 +222,7 @@ def _render_executable(
     wrapped_payload = "\n".join(textwrap.wrap(encoded, width=76))
     prefix = "\n".join(
         [
-            "#!/usr/bin/python3",
+            f"#!{runtime_interpreter}",
             f"# Deterministic Reposkop {version} executable built from {SOURCE_REPOSITORY}@{commit}.",
             "import base64",
             "import hashlib",
@@ -214,6 +247,7 @@ def build_artifact(repo: Path, revision: str) -> tuple[bytes, dict[str, Any]]:
     repo = repo.resolve(strict=True)
     commit = _object_id(repo, revision, "^{commit}")
     source_tree = _object_id(repo, commit, "^{tree}")
+    runtime_interpreter, runtime_python = _runtime_binding()
     entries = _package_blobs(repo, commit)
     version = _version(entries)
     payload = _payload(entries)
@@ -221,11 +255,14 @@ def build_artifact(repo: Path, revision: str) -> tuple[bytes, dict[str, Any]]:
         commit=commit,
         source_tree=source_tree,
         version=version,
+        runtime_interpreter=runtime_interpreter,
+        runtime_python=runtime_python,
         entries=entries,
     )
     artifact = _render_executable(
         commit=commit,
         version=version,
+        runtime_interpreter=runtime_interpreter,
         manifest=manifest,
         payload=payload,
     )
@@ -233,6 +270,9 @@ def build_artifact(repo: Path, revision: str) -> tuple[bytes, dict[str, Any]]:
         "artifact_kind": manifest["artifact_kind"],
         "artifact_sha256": hashlib.sha256(artifact).hexdigest(),
         "payload_sha256": hashlib.sha256(payload).hexdigest(),
+        "runtime_dependencies": list(RUNTIME_DEPENDENCIES),
+        "runtime_interpreter": runtime_interpreter,
+        "runtime_python": runtime_python,
         "source_commit": commit,
         "source_repository": SOURCE_REPOSITORY,
         "source_tree": source_tree,
