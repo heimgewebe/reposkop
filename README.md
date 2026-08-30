@@ -125,6 +125,28 @@ This applies especially to interrupted-work resumption, branch or rebase operati
 
 Read-only repository inspection does not require this lifecycle.
 
+## Standalone runtime artifact
+
+The Grabowski consumer may use a single-file executable that contains only the committed `reposkop/`
+package from one exact Git revision. Build it with:
+
+```text
+python3 scripts/build_self_extracting.py --revision <commit> --output <artifact-path>
+```
+
+The builder reads package blobs from Git's object database rather than the working tree, fixes archive
+metadata for deterministic output, and reports the source commit, source tree, payload digest and
+final artifact digest. Building the same revision twice on the same supported runtime therefore
+produces byte-identical output, even when the local working tree has unrelated or newer dirty files.
+
+The generated executable verifies its embedded payload and every packaged file before importing
+Reposkop. Installing or replacing a host executable is deliberately not part of the builder: Grabowski
+retains effect authority and must bind the current destination identity, perform the atomic install,
+and read back the installed source and artifact digest.
+
+`make deploy-check` includes an executable build/version smoke test so packaging drift fails CI before
+a runtime cutover.
+
 ## Validation
 
 ```text
