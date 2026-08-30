@@ -1,6 +1,6 @@
 PYTHON ?= python3
 
-.PHONY: validate test lint smoke deploy-check
+.PHONY: validate test lint smoke artifact-smoke deploy-check
 
 validate:
 	$(PYTHON) scripts/validate_examples.py
@@ -34,5 +34,13 @@ smoke:
 	$(PYTHON) -m reposkop validate "$$tmp/before.json" --json | $(PYTHON) -m json.tool >/dev/null; \
 	echo "smoke: passed"
 
-deploy-check: validate lint test smoke
+artifact-smoke:
+	@set -eu; \
+	tmp="$$(mktemp)"; \
+	trap 'rm -f "$$tmp"' EXIT INT TERM; \
+	$(PYTHON) scripts/build_self_extracting.py --revision HEAD --output "$$tmp" >/dev/null; \
+	"$$tmp" --version >/dev/null; \
+	echo "artifact-smoke: passed"
+
+deploy-check: validate lint test smoke artifact-smoke
 	@echo "deploy-check: passed"
